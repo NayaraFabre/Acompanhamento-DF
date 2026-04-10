@@ -2185,7 +2185,7 @@ function renderConf(rows){
       if(isHigh) cls+=' cell-red';
       else if(isEmpty) cls+=' cell-gry';
       const varStr=i>0&&prev!==0?`<br><span style="font-size:10px;color:${isHigh?'var(--red)':'var(--gray-m)'}">${varPct>=0?'+':''}${(varPct*100).toFixed(0)}%</span>`:'';
-      return`<td class="${cls}">${isEmpty?'—':fmt(v)}${varStr}</td>`;
+      return`<td class="${cls}">${isEmpty?'—':fmtInt(v)}${varStr}</td>`;
     }).join('');
 
     const nmCls=!c.classDF?'cell-org':'';
@@ -2196,7 +2196,7 @@ function renderConf(rows){
       <td style="font-size:11px">${c.deParaDF}</td>
       <td style="font-size:11px;color:var(--gray-m)">${c.deParaNotas}</td>
       ${mTds}
-      <td class="num ${nc(total)}">${fmt(total)}</td>
+      <td class="num ${nc(total)}">${fmtInt(total)}</td>
     </tr>`;
   }
 
@@ -2314,15 +2314,13 @@ function renderConf(rows){
     </div>
     ${equilHTML}`:'';
 
-  const p27HTML=subTab==='p27'?renderP27Conf():'';
-
   document.getElementById('tab-conf').innerHTML=`
     <div class="conf-tabs">
       <button class="conf-tab-btn${subTab==='contas'?' on':''}" onclick="goConfTab('contas',this)">🔍 Conferência Contábil</button>
       <button class="conf-tab-btn${subTab==='p27'?' on':''}" onclick="goConfTab('p27',this)">📊 Conferência P27${p27Badge}</button>
     </div>
     <div class="conf-sub-pane${subTab==='contas'?' on':''}" id="conf-pane-contas">${contasHTML}</div>
-    <div class="conf-sub-pane${subTab==='p27'?' on':''}" id="conf-pane-p27">${p27HTML}</div>`;
+    <div class="conf-sub-pane${subTab==='p27'?' on':''}" id="conf-pane-p27">${renderP27Conf()}</div>`;
 }
 
 
