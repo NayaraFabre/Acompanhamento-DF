@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/54168ff23a372e31d1e79dd670964e9280f33c01/df_analise_consolidada.html -->
+<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/cb05089d467c1e76d99a6ec8ecf392d2bfa43954/df_analise_consolidada.html -->
 <html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
 <link href="./df_analise_consolidada_files/css2" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="./df_analise_consolidada_files/css2(1)" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════════════
    FASE 1 — Paleta + Tipografia
@@ -395,7 +398,7 @@ input[type=file]{display:none}
   .tbl-wrap{max-height:none;overflow:visible}
 }
 </style>
-<meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
+<meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
 <body>
 
 <!-- ── Loading overlay ─────────────────────────────────────── -->
@@ -585,8 +588,9 @@ const Ingestion = {
   readFile(f){
     return new Promise((res,rej)=>{
       const r=new FileReader();
-      r.onload=e=>res(e.target.result);
-      r.onerror=rej;
+      const _t=setTimeout(()=>rej(new Error("Timeout lendo: "+f.name)),30000);
+      r.onload=e=>{clearTimeout(_t);res(e.target.result);};
+      r.onerror=e=>{clearTimeout(_t);rej(e);};
       r.readAsArrayBuffer(f);
     });
   },
@@ -805,6 +809,10 @@ const Ingestion = {
   // Filtrar: contas começadas em 3 ou 4
   async parseEstacionamento(files){
     const rows=[];
+    // Guard: pré-filtrar apenas arquivos Reportado válidos
+    const _estacFiles = files.filter(f => f.name.toLowerCase().includes('reportado') && /\.(xlsx|xls)$/i.test(f.name));
+    console.log("[Estac] total recebidos:", files.length, "| Reportado:", _estacFiles.length);
+    if(_estacFiles.length === 0){ console.warn("[Estac] Nenhum arquivo Reportado encontrado."); return []; }
     for(const f of files){
       if(!f.name.toLowerCase().includes('reportado')) continue;
       if(!f.name.match(/\.(xlsx|xls)$/i)) continue;
