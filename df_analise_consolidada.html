@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DF — Grupo Sá Cavalcante</title>
 <!-- SheetJS: leitura de Excel no browser -->
-<script src="./df_analise_consolidada_files/xlsx.full.min.js.download"></script>
+<script src="./df_analise_consolidada_files/xlsx.full.min.js.download" defer></script>
 <!-- Chart.js: gráficos -->
-<script src="./df_analise_consolidada_files/chart.umd.min.js.download"></script>
+<script src="./df_analise_consolidada_files/chart.umd.min.js.download" defer></script>
 <style>
 /* ── Tokens de design ─────────────────────────────────────── */
 :root{
@@ -202,6 +202,21 @@ tbody td{padding:7px 11px}
 .orig-badge{display:inline-flex;align-items:center;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:700;margin-left:4px;vertical-align:middle}
 .orig-bal{background:rgba(30,58,95,.1);color:var(--navy)}
 .orig-est{background:rgba(56,161,105,.12);color:#276749}
+/* ── Sub-abas da Conferência Contábil ────────────────────────── */
+#tab-conf.on{padding:0}
+.conf-tabs{background:#fff;border-bottom:2px solid var(--gray-l);padding:0 24px;display:flex;gap:2px;position:sticky;top:56px;z-index:85;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.conf-tab-btn{padding:11px 18px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--gray-m);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .2s}
+.conf-tab-btn:hover{color:var(--navy);background:#f7f9fc}
+.conf-tab-btn.on{color:var(--navy);border-bottom-color:var(--orange);font-weight:700;background:#fff}
+.conf-sub-pane{display:none;padding:22px 24px}
+.conf-sub-pane.on{display:block}
+/* ── P27 badge de fração zero ─────────────────────────────────── */
+.p27-zero{background:#fdecea;color:var(--red);font-weight:700}
+.p27-ok{background:#f0fff4}
+.p27-yr-hdr{background:var(--navy);color:#fff;font-weight:700;font-size:12px}
+.p27-subtotal{background:#eef2f7;font-weight:700;border-top:2px solid var(--navy-l)}
+.p27-alert-warn{margin:10px 0;padding:10px 14px;background:#fdecea;border-left:4px solid var(--red);border-radius:4px;font-size:12px;color:#7b1d1d}
+.p27-alert-ok{margin:10px 0;padding:10px 14px;background:#f0fff4;border-left:4px solid var(--green);border-radius:4px;font-size:12px;color:#1a4731}
 /* ── BP multi-year toolbar ────────────────────────────────────── */
 .bp-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--gray-l);background:#fafbfc;flex-wrap:wrap;gap:10px}
 /* ── DRE gerencial ───────────────────────────────────────────── */
@@ -446,7 +461,7 @@ const App = {
   filters:{ grupoDF:'Todos', tipo:'Todos', ano:null, mes:0, ytd:false },
   charts:{},
   activeTab:'resumo',
-  confState:{ unmapped:false, search:'', threshold:20, sortCol:-1, sortDir:1, meses:[], coligada:'Todos', hideZero:true, origem:'Todos' },
+  confState:{ unmapped:false, search:'', threshold:20, sortCol:-1, sortDir:1, meses:[], coligada:'Todos', hideZero:true, origem:'Todos', subTab:'contas' },
   dreState:{ anos:[], analytic:false, expanded:{}, trimestral:false },
   bpState:{ anos:[] }
 };
@@ -1289,6 +1304,41 @@ function bpRowsAno(allRows,ano){
   if(mes>0) return yr.filter(r=>r.mes===mes);
   const latest=yr.reduce((m,r)=>Math.max(m,r.mes),0);
   return latest>0?yr.filter(r=>r.mes===latest):yr;
+}
+
+// ── Computa P27 para TODOS os anos disponíveis e armazena em App ──
+// Usa o mês mais recente disponível de cada ano como snapshot do PL.
+// Chamada no runProcess() e reexecutada por renderBP() quando o usuário muda filtros.
+function computeP27All(){
+  const PL_PNC_CODES=['P25','P26','P28','P29','P30'];
+  const bpAll=App.unified.filter(r=>r.classe==='BP'&&r.origem!=='estacionamento');
+  const anosAll=[...new Set(bpAll.map(r=>r.ano))].sort();
+  const p27Detalhe=[];
+  const p27PA={};
+
+  for(const a of anosAll){
+    const yr=bpAll.filter(r=>r.ano===a);
+    const latestMes=yr.reduce((m,r)=>Math.max(m,r.mes),0);
+    const snap=latestMes>0?yr.filter(r=>r.mes===latestMes):yr;
+    const rowsA=snap.filter(r=>PL_PNC_CODES.includes(r.classDF));
+
+    const byEmp={};
+    for(const r of rowsA){
+      if(!byEmp[r.codColigada]) byEmp[r.codColigada]={plSum:0,empresa:r.empresa||r.codColigada};
+      byEmp[r.codColigada].plSum+=r.saldo;
+    }
+    for(const [cod,emp] of Object.entries(byEmp)){
+      const _fracaoRaw=App.raw.pncPorAno?.[cod]?.[a];
+      const fracao=(_fracaoRaw!==undefined&&_fracaoRaw!==null&&_fracaoRaw!=='')
+        ?Number(_fracaoRaw):0;
+      p27Detalhe.push({ano:a,codColigada:cod,empresa:emp.empresa,
+                       baseCalculo:emp.plSum,fracao,valorP27:emp.plSum*fracao});
+    }
+    p27PA[a]=p27Detalhe.filter(d=>d.ano===a).reduce((s,d)=>s+d.valorP27,0);
+  }
+
+  App.p27Detalhe=p27Detalhe;
+  App.p27PA=p27PA;
 }
 
 function bpToggleAno(a){
@@ -2213,7 +2263,15 @@ function renderConf(rows){
       </div>
     </div>`:'';
 
-  document.getElementById('tab-conf').innerHTML=`
+  const subTab=cs.subTab||'contas';
+  const hasP27Data=(App.p27Detalhe||[]).length>0;
+  const semFracaoCount=(App.p27Detalhe||[]).filter(d=>!d.fracao).length;
+  const p27Badge=semFracaoCount>0
+    ?`<span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px">${semFracaoCount} sem fração</span>`
+    :(hasP27Data?`<span style="background:var(--green);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px">✓</span>`:'');
+
+  // ── Conteúdo de cada sub-pane — renderizado apenas quando ativo (lazy) ──
+  const contasHTML=subTab==='contas'?`
     <div class="sec">
       <div class="sec-hdr"><span class="sec-ttl">Conferência Contábil Analítica</span>
         <button class="btn btn-grn btn-sm" onclick="expConf()">↓ Excel</button>
@@ -2254,8 +2312,17 @@ function renderConf(rows){
         </table>
       </div>
     </div>
-    ${equilHTML}
-    ${renderP27Conf()}`;
+    ${equilHTML}`:'';
+
+  const p27HTML=subTab==='p27'?renderP27Conf():'';
+
+  document.getElementById('tab-conf').innerHTML=`
+    <div class="conf-tabs">
+      <button class="conf-tab-btn${subTab==='contas'?' on':''}" onclick="goConfTab('contas',this)">🔍 Conferência Contábil</button>
+      <button class="conf-tab-btn${subTab==='p27'?' on':''}" onclick="goConfTab('p27',this)">📊 Conferência P27${p27Badge}</button>
+    </div>
+    <div class="conf-sub-pane${subTab==='contas'?' on':''}" id="conf-pane-contas">${contasHTML}</div>
+    <div class="conf-sub-pane${subTab==='p27'?' on':''}" id="conf-pane-p27">${p27HTML}</div>`;
 }
 
 
@@ -2264,76 +2331,140 @@ function renderConf(rows){
 // ══════════════════════════════════════════════════════════════
 function renderP27Conf(){
   const detalhe=App.p27Detalhe||[];
-  const p27PA=App.p27PA||{};
-  if(!detalhe.length) return '';
+  if(!detalhe.length) return `
+    <div class="sec">
+      <div class="sec-hdr">
+        <span class="sec-ttl">📊 Conferência P27 — Participação de Não Controladores</span>
+      </div>
+      <div style="padding:40px;text-align:center;color:var(--gray-m)">
+        <div style="font-size:32px;margin-bottom:12px">📋</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:6px">Sem dados de P27</div>
+        <div style="font-size:12px">Carregue o CONTAS DF.xlsx com a aba <strong>"Participação de não controlador"</strong> e processe os balancetes.</div>
+      </div>
+    </div>`;
 
   const anos=[...new Set(detalhe.map(d=>d.ano))].sort().reverse();
+  const semFracaoList=detalhe.filter(d=>!d.fracao);
+  const totalGeral=detalhe.reduce((s,d)=>s+d.valorP27,0);
 
+  // ── Alerta visual ─────────────────────────────────────────
+  const alertaHTML=semFracaoList.length>0
+    ?`<div class="p27-alert-warn">
+        <strong>⚠ ${semFracaoList.length} coligada(s) com fração = 0% — valor P27 zerado para esses registros.</strong><br>
+        <span style="margin-top:4px;display:block">
+          ${[...new Set(semFracaoList.map(d=>`${d.empresa||d.codColigada} (${d.codColigada}, ${d.ano})`))].join(' · ')}
+        </span>
+        <span style="margin-top:6px;display:block;color:#9b2c2c">
+          Corrija na aba <strong>"Participação de não controlador"</strong> do CONTAS DF.xlsx e reprocesse.
+        </span>
+      </div>`
+    :`<div class="p27-alert-ok">✅ Todas as coligadas com fração de P27 mapeada.</div>`;
+
+  // ── KPIs de resumo ────────────────────────────────────────
+  const totalEmpresas=[...new Set(detalhe.map(d=>d.codColigada))].length;
+  const totalComFracao=detalhe.filter(d=>d.fracao>0).length;
+  const kpisHTML=`
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div class="kpi o" style="min-width:160px">
+        <div class="kpi-lbl">Total P27 (todos os anos)</div>
+        <div class="kpi-val">${fmtInt(totalGeral)}</div>
+      </div>
+      <div class="kpi" style="min-width:140px;border-left-color:var(--navy)">
+        <div class="kpi-lbl">Coligadas</div>
+        <div class="kpi-val" style="color:var(--navy)">${totalEmpresas}</div>
+      </div>
+      <div class="kpi${semFracaoList.length>0?' r':' g'}" style="min-width:160px">
+        <div class="kpi-lbl">Com fração mapeada</div>
+        <div class="kpi-val">${totalComFracao} / ${detalhe.length} registros</div>
+      </div>
+    </div>`;
+
+  // ── Tabela com agrupamento por ano ─────────────────────────
   let tbody='';
   for(const a of anos){
     const linhasAno=detalhe.filter(d=>d.ano===a);
     const totalAno=linhasAno.reduce((s,d)=>s+d.valorP27,0);
-    const totalBase=linhasAno.reduce((s,d)=>s+d.baseCalculo,0);
+    const totalBaseAno=linhasAno.reduce((s,d)=>s+d.baseCalculo,0);
+    const semFracaoAno=linhasAno.filter(d=>!d.fracao).length;
 
-    tbody+=`<tr style="background:var(--navy);color:#fff;font-weight:700;font-size:12px">
-      <td colspan="6" style="padding:6px 12px">📅 ${a} — Total P27: ${fmtInt(totalAno)}</td>
+    // Cabeçalho do grupo-ano
+    tbody+=`<tr class="p27-yr-hdr">
+      <td colspan="6" style="padding:7px 14px">
+        📅 ${a}
+        <span style="margin-left:16px;font-weight:400;font-size:11px;opacity:.85">Total P27: ${fmtInt(totalAno)}</span>
+        ${semFracaoAno>0?`<span style="margin-left:10px;background:var(--red);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px">⚠ ${semFracaoAno} sem fração</span>`:''}
+      </td>
     </tr>`;
 
     for(const d of linhasAno){
-      const semFracao=d.fracao===0||d.fracao===null||d.fracao===undefined;
-      tbody+=`<tr style="${semFracao?'background:#fff3cd;':''}">
-        <td style="font-family:monospace;font-size:11px;padding:5px 10px">${d.ano}</td>
-        <td style="font-family:monospace;font-size:11px;padding:5px 10px;font-weight:600">${d.codColigada}</td>
-        <td style="padding:5px 10px">${d.empresa||'—'}</td>
-        <td class="num" style="padding:5px 10px">${fmtInt(d.baseCalculo)}</td>
-        <td class="num" style="padding:5px 10px;font-weight:600;color:${semFracao?'var(--red)':'var(--navy)'}">
-          ${semFracao?'⚠️ 0,00%':(d.fracao*100).toFixed(2)+'%'}
+      const semFracao=!d.fracao;
+      tbody+=`<tr class="${semFracao?'p27-zero':''}">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">${d.ano}</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">${d.codColigada}</td>
+        <td style="padding:6px 10px;font-size:12px">${d.empresa||'—'}</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">${fmtInt(d.baseCalculo)}</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:${semFracao?'var(--red)':'var(--navy)'}">
+          ${semFracao
+            ?'<span title="Fração não encontrada na aba Participação de não controlador">⚠ 0,00%</span>'
+            :(d.fracao*100).toFixed(2)+'%'}
         </td>
-        <td class="num" style="padding:5px 10px;font-weight:700;color:${semFracao?'var(--red)':'var(--green)'}">
-          ${fmtInt(d.valorP27)}
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:${semFracao?'var(--red)':'var(--green)'}">
+          ${semFracao?'<span style="color:var(--red)">—</span>':fmtInt(d.valorP27)}
         </td>
       </tr>`;
     }
 
-    tbody+=`<tr style="background:#eef2f7;font-weight:700;border-top:2px solid var(--navy)">
-      <td colspan="3" style="padding:5px 12px;font-size:12px">Total ${a}</td>
-      <td class="num" style="padding:5px 10px">${fmtInt(totalBase)}</td>
-      <td class="num" style="padding:5px 10px">—</td>
-      <td class="num" style="padding:5px 10px;color:var(--navy)">${fmtInt(totalAno)}</td>
+    // Subtotal do ano
+    tbody+=`<tr class="p27-subtotal">
+      <td colspan="3" style="padding:6px 14px;font-size:12px">Subtotal ${a}</td>
+      <td class="num" style="padding:6px 10px;font-size:12px">${fmtInt(totalBaseAno)}</td>
+      <td class="num" style="padding:6px 10px">—</td>
+      <td class="num" style="padding:6px 10px;font-size:13px;color:var(--navy)">${fmtInt(totalAno)}</td>
     </tr>
-    <tr><td colspan="6" style="padding:3px"></td></tr>`;
+    <tr><td colspan="6" style="padding:2px;background:#f8f9fa"></td></tr>`;
   }
 
-  const semFracaoList=detalhe.filter(d=>!d.fracao);
-  const alertaFracao=semFracaoList.length>0
-    ?`<div style="margin:8px 0;padding:8px 12px;background:#fff3cd;border-left:4px solid #f39c12;border-radius:4px;font-size:12px">
-        ⚠️ <strong>${semFracaoList.length} registro(s) com fração = 0%:</strong>
-        ${[...new Set(semFracaoList.map(d=>d.codColigada+' ('+d.ano+')'))].join(', ')}
-        — Verifique a aba "Participação de não controlador" no CONTAS DF.xlsx
-      </div>`
-    :'<div style="margin:8px 0;padding:8px 12px;background:#d4edda;border-left:4px solid var(--green);border-radius:4px;font-size:12px">✅ Todas as coligadas com fração mapeada</div>';
+  // Total geral
+  tbody+=`<tr style="background:var(--navy-d);color:#fff;font-weight:700">
+    <td colspan="3" style="padding:8px 14px;font-size:13px">TOTAL GERAL</td>
+    <td class="num" style="padding:8px 10px;font-size:13px">${fmtInt(detalhe.reduce((s,d)=>s+d.baseCalculo,0))}</td>
+    <td class="num" style="padding:8px 10px">—</td>
+    <td class="num" style="padding:8px 10px;font-size:14px">${fmtInt(totalGeral)}</td>
+  </tr>`;
 
   return `
-    <div class="sec" style="margin-top:16px">
+    <div class="sec">
       <div class="sec-hdr">
-        <span class="sec-ttl">📊 Conferência P27 — Participação de Não Controladores por Coligada</span>
-        <button class="btn btn-grn btn-sm" onclick="expP27Conf()" style="margin-left:8px">↓ Excel P27</button>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="sec-ttl">📊 Conferência P27 — Participação de Não Controladores por Coligada</span>
+          ${semFracaoList.length>0
+            ?`<span style="background:var(--red);color:#fff;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:700">⚠ ${semFracaoList.length} sem fração</span>`
+            :`<span style="background:var(--green);color:#fff;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:700">✓ Completo</span>`}
+        </div>
+        <button class="btn btn-grn btn-sm" onclick="expP27Conf()">↓ Excel P27</button>
       </div>
-      <div style="font-size:12px;color:var(--gray-m);margin-bottom:8px">
-        Base: soma dos grupos P25 + P26 + P28 + P29 + P30 por CODCOLIGADA × ANO · Fração lida da aba "Participação de não controlador"
+      <div style="padding:14px 18px 0">
+        <div style="font-size:11px;color:var(--gray-m);margin-bottom:10px">
+          Base de cálculo: soma dos grupos <strong>P25 + P26 + P28 + P29 + P30</strong> por CODCOLIGADA × ANO (P24 Capital Social excluído) ·
+          Fração lida da aba <strong>"Participação de não controlador"</strong> no CONTAS DF.xlsx ·
+          Valor P27 = Base × Fração
+        </div>
+        ${alertaHTML}
+        ${kpisHTML}
       </div>
-      ${alertaFracao}
-      <div class="tbl-wrap" style="max-height:520px">
+      <div class="tbl-wrap" style="max-height:560px">
         <table>
-          <thead><tr style="position:sticky;top:0;z-index:2">
-            <th style="width:60px">Ano</th>
-            <th style="width:120px">CODCOLIGADA</th>
-            <th>Empresa</th>
-            <th class="num">Base PL (P25–P30)</th>
-            <th class="num">Fração %</th>
-            <th class="num">Valor P27</th>
-          </tr></thead>
-          <tbody>${tbody||'<tr><td colspan="6" class="empty">Sem dados P27 disponíveis — carregue o CONTAS DF.xlsx com a aba "Participação de não controlador"</td></tr>'}</tbody>
+          <thead>
+            <tr>
+              <th style="width:55px">Ano</th>
+              <th style="width:110px">CODCOLIGADA</th>
+              <th>Empresa</th>
+              <th class="num">Base PL (P25–P30)</th>
+              <th class="num">Fração %</th>
+              <th class="num">Valor P27</th>
+            </tr>
+          </thead>
+          <tbody>${tbody}</tbody>
         </table>
       </div>
     </div>`;
@@ -2342,12 +2473,52 @@ function renderP27Conf(){
 function expP27Conf(){
   const detalhe=App.p27Detalhe||[];
   if(!detalhe.length){alert('Sem dados P27 para exportar.');return;}
-  const hdr=['Ano','CODCOLIGADA','Empresa','Base PL (P25-P30)','Fração (%)','Valor P27'];
+  const hdr=['Ano','CODCOLIGADA','Empresa','Base PL (P25-P30)','Fração (%)','Valor P27','Status'];
   const data=[hdr];
   for(const d of detalhe){
-    data.push([d.ano,d.codColigada,d.empresa||'',d.baseCalculo,(d.fracao||0)*100,d.valorP27]);
+    data.push([
+      d.ano,
+      d.codColigada,
+      d.empresa||'',
+      d.baseCalculo,
+      (d.fracao||0)*100,
+      d.valorP27,
+      d.fracao>0?'OK':'SEM FRAÇÃO'
+    ]);
   }
+  // Totais por ano
+  const anos=[...new Set(detalhe.map(d=>d.ano))].sort().reverse();
+  data.push([]);
+  data.push(['SUBTOTAIS POR ANO','','','','','','']);
+  for(const a of anos){
+    const la=detalhe.filter(d=>d.ano===a);
+    data.push([a,'','Subtotal',la.reduce((s,d)=>s+d.baseCalculo,0),'',la.reduce((s,d)=>s+d.valorP27,0),'']);
+  }
+  data.push(['TOTAL','','',detalhe.reduce((s,d)=>s+d.baseCalculo,0),'',detalhe.reduce((s,d)=>s+d.valorP27,0),'']);
   expSheet(data,`Conferencia_P27_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function goConfTab(name,_btn){
+  App.confState.subTab=name;
+  // Atualiza botões
+  document.querySelectorAll('.conf-tab-btn').forEach(b=>b.classList.remove('on'));
+  const btn=_btn||document.querySelector(`.conf-tab-btn[onclick*="'${name}'"]`);
+  if(btn) btn.classList.add('on');
+  // Mostra o painel correto
+  document.querySelectorAll('.conf-sub-pane').forEach(p=>p.classList.remove('on'));
+  const pane=document.getElementById(`conf-pane-${name}`);
+  if(!pane) return;
+  pane.classList.add('on');
+  // Renderiza conteúdo lazy se ainda estiver vazio
+  if(!pane.children.length||pane.dataset.rendered!=='1'){
+    if(name==='contas'){
+      // Re-renderiza a aba de contas via ciclo normal
+      _reRenderConf();
+    } else if(name==='p27'){
+      pane.innerHTML=renderP27Conf();
+      pane.dataset.rendered='1';
+    }
+  }
 }
 
 function _reRenderConf(){renderConf(Ind.filter(App.unified,App.filters));}
@@ -2660,6 +2831,24 @@ function checkProc(){
 // INICIALIZAÇÃO — restaura vínculos salvos ao carregar a página
 // ─────────────────────────────────────────────────────────────
 async function initUploadScreen(){
+  // Tenta restaurar estado processado anteriormente
+  try{
+    const appState=await idbLoad('appState');
+    if(appState&&appState.unified&&appState.unified.length>0){
+      App.unified=appState.unified;
+      App.validations=appState.validations||[];
+      App.raw=appState.raw||App.raw;
+      App.filters=appState.filters||App.filters;
+      computeP27All();
+      populateFilters();
+      document.getElementById('upload-screen').style.display='none';
+      document.getElementById('main-app').style.display='block';
+      document.getElementById('app-footer').style.display='flex';
+      renderTab('resumo');
+      return;
+    }
+  }catch(e){console.warn('[idb] appState restore failed:',e);}
+
   if(!FSA_OK){
     document.getElementById('fsa-warn').style.display='';
     // Mostra nomes salvos mas sem handles funcionais
@@ -2743,6 +2932,9 @@ async function runProcess(){
     // 9. Validações
     App.validations=Transform.runValidations(App.unified);
 
+    // 9.5 Pré-computa P27 para todos os anos (disponível imediatamente em Conferência P27)
+    computeP27All();
+
     // 10. Popular filtros
     populateFilters();
 
@@ -2757,6 +2949,9 @@ async function runProcess(){
     renderTab('resumo');
 
     ldgHide();
+
+    // Persiste após a UI estar visível — evita bloquear a renderização
+    setTimeout(()=>idbSave('appState',{unified:App.unified,validations:App.validations,raw:App.raw,filters:App.filters}).catch(e=>console.warn('[idb] appState save failed:',e)),0);
 
     // ── Diagnóstico de classificação (sempre visível no console) ──────────────
     const _cd={};
@@ -2801,6 +2996,7 @@ function populateFilters(){
 
 function resetUpload(){
   if(!confirm('Deseja reconfigurar fontes? Os dados atuais serão perdidos.')) return;
+  idbDel('appState').catch(e=>console.warn('[idb] appState delete failed:',e));
   App.raw={participacoes:[],dpInc:[],dpShop:[],dpEstac:[],balancetes:[],estacionamento:[],pncPorAno:{}};
   App.unified=[];App.validations=[];
   App.files={contas:null,balancetes:[],estacionamento:[]};
