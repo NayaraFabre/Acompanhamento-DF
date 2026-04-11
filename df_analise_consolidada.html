@@ -1,17 +1,16 @@
 <!DOCTYPE html>
-<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/d0fbd33b60d2a6fa4fcf1e5abfb7b66f504843ed/df_analise_consolidada.html -->
+<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/0605fc455f0fd8484aa054b32293a8740bcdd13e/df_analise_consolidada.html -->
 <html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DF — Grupo Sá Cavalcante</title>
-<!-- Fontes -->
+<!-- SheetJS: leitura de Excel no browser -->
+<script src="./df_analise_consolidada_files/xlsx.full.min.js.download" defer=""></script>
+<!-- Chart.js: gráficos -->
+<script src="./df_analise_consolidada_files/chart.umd.min.js.download" defer=""></script>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
 <link href="./df_analise_consolidada_files/css2" rel="stylesheet">
-<!-- SheetJS -->
-<script src="./df_analise_consolidada_files/xlsx.full.min.js.download" defer=""></script>
-<!-- Chart.js -->
-<script src="./df_analise_consolidada_files/chart.umd.min.js.download" defer=""></script>
 <style>
 /* ═══════════════════════════════════════════════════
    FASE 1 — Paleta + Tipografia
@@ -396,8 +395,7 @@ input[type=file]{display:none}
   .tbl-wrap{max-height:none;overflow:visible}
 }
 </style>
-<meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
-
+<meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
 <body>
 
 <!-- ── Loading overlay ─────────────────────────────────────── -->
@@ -584,15 +582,14 @@ const MNL= ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Ag
 // ══════════════════════════════════════════════════════════════
 const Ingestion = {
 
-readFile(f){
-  return new Promise((res,rej)=>{
-    const r=new FileReader();
-    const _t=setTimeout(()=>rej(new Error("Timeout lendo: "+f.name)),30000);
-    r.onload=e=>{clearTimeout(_t);res(e.target.result);};
-    r.onerror=e=>{clearTimeout(_t);rej(e);};
-    r.readAsArrayBuffer(f);
-  });
-},
+  readFile(f){
+    return new Promise((res,rej)=>{
+      const r=new FileReader();
+      const _t=setTimeout(()=>rej(new Error("Timeout lendo: "+f.name)),30000);
+      r.onload=e=>{clearTimeout(_t);res(e.target.result);};
+      r.onerror=e=>{clearTimeout(_t);rej(e);};
+      r.readAsArrayBuffer(f);
+    });
   },
 
   // Extrai MM e AAAA do nome do arquivo balancete (formato MM.AAAA)
@@ -809,9 +806,6 @@ readFile(f){
   // Filtrar: contas começadas em 3 ou 4
   async parseEstacionamento(files){
     const rows=[];
-    const _ef=files.filter(f=>f.name.toLowerCase().includes('reportado')&&/\.(xlsx|xls)$/i.test(f.name));
-    console.log('[Estac] total:',files.length,'| Reportado:',_ef.length);
-    if(!_ef.length){console.warn('[Estac] Nenhum arquivo Reportado.');return [];}
     // Guard: pré-filtrar apenas arquivos Reportado válidos
     const _estacFiles = files.filter(f => f.name.toLowerCase().includes('reportado') && /\.(xlsx|xls)$/i.test(f.name));
     console.log("[Estac] total recebidos:", files.length, "| Reportado:", _estacFiles.length);
