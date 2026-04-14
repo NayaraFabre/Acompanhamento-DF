@@ -1,9 +1,14 @@
-<!DOCTYPE html>
-<!-- saved from url=(0126)https://tess-workflows-files.storage.googleapis.com/f8c2329ac1608bcd677d56115d3c23cc96bd5a11/df_analise_consolidada_FIXED.html -->
+﻿<!DOCTYPE html>
 <html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <style>
-/* Fallback seguro para uso offline via file:// */
-body, * { font-family: 'Segoe UI', 'Inter', Arial, sans-serif; }
+/* Fonte segura para uso offline via file:// - Inter fallback */
+:root {
+  --font-family: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+body, button, input, select, textarea, th, td, div, span, p,
+h1, h2, h3, h4, h5, h6, label {
+  font-family: var(--font-family) !important;
+}
 </style>
 
 
@@ -1009,9 +1014,9 @@ const Transform = {
       if(r.origem==='balancete'){
         // Passivo (2,7) e Custos/Despesas (3,8): inverter para negativo
         // Ativo (1,6), Receitas (4,9) e Transitórias (5): manter positivo
-        saldoFinal = (n1==='2'||n1==='3'||n1==='7'||n1==='8') ? r.saldo*-1 : r.saldo;
+        saldoFinal = (n1==='2'||n1==='3'||n1==='7'||n1==='8') ? (+(r.saldo??0))*-1 : +(r.saldo??0);
       } else {
-        saldoFinal = r.saldo;
+        saldoFinal = +(r.saldo??0);
       }
 
       return {...r,n1,classe,saldoFinal};
@@ -1522,7 +1527,7 @@ function renderBP(allRows){
   bs.anos=bs.anos.filter(a=>anosDisp.includes(a));
   if(!bs.anos.length&&anosDisp.length) bs.anos=[anosDisp[0]];
   const anosAtivos=[...bs.anos].sort().reverse();
-  const anoBase=anosAtivos[0];
+  const anoBase=anosAtivos[0] ?? "";
   const multi=anosAtivos.length>1;
 
   // Agrega por classDF e ano, usando saldo bruto (valores da fonte)
@@ -1736,7 +1741,7 @@ function renderBP(allRows){
     for(const a of anosAtivos) ths+=`<th class="num">${a}</th>`;
     if(anosAtivos.length>=2) ths+=`<th class="num dre-var">Var. %</th>`;
   }else{
-    ths+=`<th class="num">Saldo ${anoBase}</th><th class="num">% Ativo</th>`;
+    ths+=`<th class="num">Saldo ${anoBase ?? ""}</th><th class="num">% Ativo</th>`;
   }
 
   document.getElementById('tab-bp').innerHTML=`
