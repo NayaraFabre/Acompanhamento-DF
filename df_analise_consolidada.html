@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/a0fdb238b47c3ed892d5dec293c5b5fdf332779d/df_analise_consolidada.html -->
+<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/191794a3cb5cd4e9817ac5dbf826717bfc64be11/df_analise_consolidada.html -->
 <html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <style>
 /* Fonte segura para uso offline via file:// - Inter fallback */
@@ -2853,7 +2853,7 @@ async function linkContas(){
   if(!FSA_OK){document.getElementById('fi-contas-fb').click();return;}
   try{
     const[fh]=await window.showOpenFilePicker({
-      types:[{description:'Excel'  // FIX: id removido — causa erro file:// cross-origin no Chrome,accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx','.xls']}}],
+      types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx','.xls']}}],
       multiple:false
     });
     await idbSave('h1',fh);
@@ -2892,7 +2892,7 @@ function onContasFileFb(inp){
 async function linkBal(){
   if(!FSA_OK){document.getElementById('fi-bal-fb').click();return;}
   try{
-    const dh=await window.showDirectoryPicker({mode:'read'}) // FIX: id removido — causa erro file:// cross-origin no Chrome;
+    const dh=await window.showDirectoryPicker({mode:'read'});
     await idbSave('h2',dh);
     localStorage.setItem('p2',dh.name);
     await _loadBal(dh);
@@ -2932,7 +2932,7 @@ function onBalFilesFb(inp){
 async function linkEstac(){
   if(!FSA_OK){document.getElementById('fi-estac-fb').click();return;}
   try{
-    const dh=await window.showDirectoryPicker({mode:'read'}) // FIX: id removido — causa erro file:// cross-origin no Chrome;
+    const dh=await window.showDirectoryPicker({mode:'read'});
     await idbSave('h3',dh);
     localStorage.setItem('p3',dh.name);
     await _loadEstac(dh);
