@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/a0fdb238b47c3ed892d5dec293c5b5fdf332779d/df_analise_consolidada.html -->
 <html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <style>
 /* Fonte segura para uso offline via file:// - Inter fallback */
@@ -452,7 +453,7 @@ input[type=file]{display:none}
   .tbl-wrap{max-height:none;overflow:visible}
 }
 </style>
-<meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
+<meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
 <body>
 
 <!-- ── Loading overlay ─────────────────────────────────────── -->
@@ -2852,8 +2853,7 @@ async function linkContas(){
   if(!FSA_OK){document.getElementById('fi-contas-fb').click();return;}
   try{
     const[fh]=await window.showOpenFilePicker({
-      id:'contas-df',
-      types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx','.xls']}}],
+      types:[{description:'Excel'  // FIX: id removido — causa erro file:// cross-origin no Chrome,accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx','.xls']}}],
       multiple:false
     });
     await idbSave('h1',fh);
@@ -2892,7 +2892,7 @@ function onContasFileFb(inp){
 async function linkBal(){
   if(!FSA_OK){document.getElementById('fi-bal-fb').click();return;}
   try{
-    const dh=await window.showDirectoryPicker({id:'balancetes',mode:'read'});
+    const dh=await window.showDirectoryPicker({mode:'read'}) // FIX: id removido — causa erro file:// cross-origin no Chrome;
     await idbSave('h2',dh);
     localStorage.setItem('p2',dh.name);
     await _loadBal(dh);
@@ -2932,7 +2932,7 @@ function onBalFilesFb(inp){
 async function linkEstac(){
   if(!FSA_OK){document.getElementById('fi-estac-fb').click();return;}
   try{
-    const dh=await window.showDirectoryPicker({id:'estacionamento',mode:'read'});
+    const dh=await window.showDirectoryPicker({mode:'read'}) // FIX: id removido — causa erro file:// cross-origin no Chrome;
     await idbSave('h3',dh);
     localStorage.setItem('p3',dh.name);
     await _loadEstac(dh);
