@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/6b9db7e9d1029fbfe6d3a0048a1766a9b9161606/df_analise_consolidada.html -->
 <html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <style>
 /* Fonte segura para uso offline via file:// - Inter fallback */
@@ -452,14 +453,14 @@ input[type=file]{display:none}
   .tbl-wrap{max-height:none;overflow:visible}
 }
 </style>
-<meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
+<meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
 <body>
 
 <!-- ── Loading overlay ─────────────────────────────────────── -->
-<div class="loading-ov on" id="ldg">
+<div class="loading-ov" id="ldg">  <!-- FIX: removido "on" inicial; loader controlado apenas por JS -->
   <div class="spinner"></div>
-  <div class="load-txt" id="ldg-txt">Lendo arquivos de estacionamento...</div>
-  <div class="load-sub" id="ldg-sub">Apenas arquivos "Reportado"</div>
+  <div class="load-txt" id="ldg-txt">Renderizando interface...</div>
+  <div class="load-sub" id="ldg-sub"></div>
 </div>
 
 <!-- ── Header ─────────────────────────────────────────────── -->
@@ -471,13 +472,11 @@ input[type=file]{display:none}
       <span class="hdr-subtitle">Demonstrações Financeiras</span>
     </div>
   </div>
-  <div class="hdr-badges" id="hdr-badges">
-    <!-- badges injetados pelo JS original — não alterar -->
-  </div>
+  <div class="hdr-badges" id="hdr-badges"><span class="badge badge-err">⚠ 26 Erros</span><span class="badge badge-wrn">! 1 Alerta</span></div>
 </header>
 
 <!-- ── Upload screen ───────────────────────────────────────── -->
-<div id="upload-screen">
+<div id="upload-screen" style="display: none;">
   <div class="up-card">
     <h2>Fontes de Dados</h2>
 
@@ -502,7 +501,7 @@ input[type=file]{display:none}
           <button class="btn btn-sec btn-sm" onclick="linkContas()">🔗 Vincular</button>
           <button class="btn btn-sec btn-sm" id="btn-ref1" onclick="refreshItem(1)">🔄 Atualizar</button>
         </div>
-        <div class="upd-status upd-wrn" id="upd1-status">Clique em 🔄 Atualizar para reconectar</div>
+        <div class="upd-status upd-ok" id="upd1-status">✅ Pronto</div>
         <input type="file" id="fi-contas-fb" accept=".xlsx,.xls" style="display:none" onchange="onContasFileFb(this)">
       </div>
     </div>
@@ -522,7 +521,7 @@ input[type=file]{display:none}
           <button class="btn btn-sec btn-sm" onclick="linkBal()">🔗 Vincular</button>
           <button class="btn btn-sec btn-sm" id="btn-ref2" onclick="refreshItem(2)">🔄 Atualizar</button>
         </div>
-        <div class="upd-status upd-wrn" id="upd2-status">Clique em 🔄 Atualizar para reconectar</div>
+        <div class="upd-status upd-ok" id="upd2-status">ℹ️ Sem alterações</div>
         <input type="file" id="fi-bal-fb" accept=".xlsx,.xls,.XLSX,.XLS" multiple="" webkitdirectory="" style="display:none" onchange="onBalFilesFb(this)">
       </div>
     </div>
@@ -542,7 +541,7 @@ input[type=file]{display:none}
           <button class="btn btn-sec btn-sm" onclick="linkEstac()">🔗 Vincular</button>
           <button class="btn btn-sec btn-sm" id="btn-ref3" onclick="refreshItem(3)">🔄 Atualizar</button>
         </div>
-        <div class="upd-status upd-wrn" id="upd3-status">Clique em 🔄 Atualizar para reconectar</div>
+        <div class="upd-status upd-ok" id="upd3-status">ℹ️ Sem alterações</div>
         <input type="file" id="fi-estac-fb" accept=".xlsx,.xls,.XLSX,.XLS" multiple="" webkitdirectory="" style="display:none" onchange="onEstacFilesFb(this)">
       </div>
     </div>
@@ -555,7 +554,7 @@ input[type=file]{display:none}
 </div>
 
 <!-- ── Main app ─────────────────────────────────────────────── -->
-<div id="main-app" style="display:none">
+<div id="main-app" style="display: block;">
 
   <!-- Filters bar -->
   <div class="fil-bar">
@@ -569,11 +568,11 @@ input[type=file]{display:none}
     </div>
     <div class="fil-grp">
       <span class="fil-lbl">Tipo</span>
-      <select id="f-tipo" onchange="applyFilters()"><option value="Todos">Todos</option></select>
+      <select id="f-tipo" onchange="applyFilters()"><option value="Todos">Todos</option><option value="SC2 Participações">SC2 Participações</option><option value="Shopping Dutra">Shopping Dutra</option><option value="Shopping Mestre Álvaro">Shopping Mestre Álvaro</option><option value="Shopping Metrópole Ananindeua">Shopping Metrópole Ananindeua</option><option value="Shopping Montserrat">Shopping Montserrat</option><option value="Shopping Moxuara">Shopping Moxuara</option><option value="Shopping Rio Poty">Shopping Rio Poty</option><option value="Shopping da Ilha">Shopping da Ilha</option></select>
     </div>
     <div class="fil-grp">
       <span class="fil-lbl">Ano</span>
-      <select id="f-ano" onchange="applyFilters()"></select>
+      <select id="f-ano" onchange="applyFilters()"><option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option></select>
     </div>
     <div class="fil-grp">
       <span class="fil-lbl">Mês</span>
@@ -596,20 +595,1368 @@ input[type=file]{display:none}
 
   <!-- Tabs nav -->
   <div class="tabs-nav">
-    <button class="tab-btn on" onclick="goTab(&#39;resumo&#39;,this)">📊 Resumo Executivo</button>
+    <button class="tab-btn" onclick="goTab(&#39;resumo&#39;,this)">📊 Resumo Executivo</button>
     <button class="tab-btn" onclick="goTab(&#39;bp&#39;,this)">📋 Balanço Patrimonial</button>
     <button class="tab-btn" onclick="goTab(&#39;dre&#39;,this)">📈 DRE</button>
     <button class="tab-btn" onclick="goTab(&#39;ind&#39;,this)">🎯 Indicadores</button>
     <button class="tab-btn" onclick="goTab(&#39;end&#39;,this)">💰 Endividamento</button>
-    <button class="tab-btn" onclick="goTab(&#39;conf&#39;,this)">🔍 Conferência Contábil</button>
+    <button class="tab-btn on" onclick="goTab(&#39;conf&#39;,this)">🔍 Conferência Contábil</button>
   </div>
 
-  <div class="tab-pane on" id="tab-resumo"></div>
-  <div class="tab-pane" id="tab-bp"></div>
+  <div class="tab-pane" id="tab-resumo"><div class="alert-panel">
+    <div class="alert-hdr">📋 Validações Automáticas</div>
+    <div class="alert-item a-wrn">
+      <span class="a-ico">🟡</span>
+      <div><strong>Contas Não Mapeadas</strong><br><span style="color:var(--gray-m)">938 conta(s) sem de-para. Verifique aba Conferência Contábil.</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Jan/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.22 Bi | Passivo: R$ 3.35 Bi | PL: R$ 2.87 Bi | NM: R$ 0 | Diff real: R$ 7.592</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Fev/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.24 Bi | Passivo: R$ 3.36 Bi | PL: R$ 2.88 Bi | NM: R$ 0 | Diff real: R$ 17.657</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Mar/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.25 Bi | Passivo: R$ 3.37 Bi | PL: R$ 2.88 Bi | NM: R$ 0 | Diff real: R$ 16.526</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Abr/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.28 Bi | Passivo: R$ 3.39 Bi | PL: R$ 2.89 Bi | NM: R$ 0 | Diff real: R$ 8.620</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Mai/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.33 Bi | Passivo: R$ 3.44 Bi | PL: R$ 2.89 Bi | NM: R$ 0 | Diff real: R$ 10.955</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Jun/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.36 Bi | Passivo: R$ 3.46 Bi | PL: R$ 2.90 Bi | NM: R$ 0 | Diff real: R$ 1.39 Mi</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Jul/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.39 Bi | Passivo: R$ 3.48 Bi | PL: R$ 2.91 Bi | NM: R$ 0 | Diff real: R$ 1.40 Mi</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Ago/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.41 Bi | Passivo: R$ 3.49 Bi | PL: R$ 2.92 Bi | NM: R$ 0 | Diff real: R$ 1.25 Mi</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Set/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.44 Bi | Passivo: R$ 3.51 Bi | PL: R$ 2.92 Bi | NM: R$ 0 | Diff real: R$ 1.22 Mi</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Out/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.46 Bi | Passivo: R$ 3.53 Bi | PL: R$ 2.93 Bi | NM: R$ 0 | Diff real: R$ 1.21 Mi</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Nov/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 6.49 Bi | Passivo: R$ 3.55 Bi | PL: R$ 2.94 Bi | NM: R$ 0 | Diff real: R$ 1.19 Mi</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Dez/2024</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.14 Bi | Passivo: R$ 3.59 Bi | PL: R$ 3.54 Bi | NM: R$ 0 | Diff real: R$ 12.06 Mi</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Jan/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.39 Bi | Passivo: R$ 3.66 Bi | PL: R$ 3.73 Bi | NM: R$ 6.17 Mi | Diff real: R$ 7.62 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Fev/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.44 Bi | Passivo: R$ 3.71 Bi | PL: R$ 3.74 Bi | NM: R$ 1.019 | Diff real: R$ 7.61 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Mar/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.52 Bi | Passivo: R$ 3.75 Bi | PL: R$ 3.78 Bi | NM: R$ 119.394 | Diff real: R$ 7.61 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Abr/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.55 Bi | Passivo: R$ 3.47 Bi | PL: R$ 4.08 Bi | NM: R$ 7.45 Mi | Diff real: R$ 7.59 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Mai/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.58 Bi | Passivo: R$ 3.50 Bi | PL: R$ 4.09 Bi | NM: R$ 122.992 | Diff real: R$ 7.62 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Jun/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.65 Bi | Passivo: R$ 3.57 Bi | PL: R$ 4.09 Bi | NM: R$ 152.678 | Diff real: R$ 8.98 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Jul/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.67 Bi | Passivo: R$ 3.58 Bi | PL: R$ 4.10 Bi | NM: R$ 167.084 | Diff real: R$ 8.99 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Ago/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.69 Bi | Passivo: R$ 3.59 Bi | PL: R$ 4.10 Bi | NM: R$ 8.66 Mi | Diff real: R$ 9.06 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Set/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.78 Bi | Passivo: R$ 3.62 Bi | PL: R$ 4.16 Bi | NM: R$ 17.391 | Diff real: R$ 9.12 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Out/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 7.85 Bi | Passivo: R$ 3.69 Bi | PL: R$ 4.17 Bi | NM: R$ 310.391 | Diff real: R$ 9.15 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Nov/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 8.55 Bi | Passivo: R$ 3.73 Bi | PL: R$ 4.83 Bi | NM: R$ 17.391 | Diff real: R$ 9.21 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Dez/2025</strong><br><span style="color:var(--gray-m)">Ativo: R$ 8.29 Bi | Passivo: R$ 3.70 Bi | PL: R$ 4.54 Bi | NM: R$ -0 | Diff real: R$ 45.71 Mi</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Jan/2026</strong><br><span style="color:var(--gray-m)">Ativo: R$ 8.58 Bi | Passivo: R$ 3.81 Bi | PL: R$ 4.78 Bi | NM: R$ 6.06 Mi | Diff real: R$ 12.11 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-err">
+      <span class="a-ico">🔴</span>
+      <div><strong>Desequilíbrio — Fev/2026</strong><br><span style="color:var(--gray-m)">Ativo: R$ 8.58 Bi | Passivo: R$ 3.81 Bi | PL: R$ 4.78 Bi | NM: R$ 6.06 Mi | Diff real: R$ 12.11 Mi — ver Conferência Contábil</span></div>
+    </div><div class="alert-item a-ok">
+      <span class="a-ico">🟢</span>
+      <div><strong>Períodos Carregados</strong><br><span style="color:var(--gray-m)">26 período(s): Abr/2024 · Abr/2025 · Ago/2024 · Ago/2025 · Dez/2024 · Dez/2025 · Fev/2024 · Fev/2025 · Fev/2026 · Jan/2024 · Jan/2025 · Jan/2026 · Jul/2024 · Jul/2025 · Jun/2024 · Jun/2025 · Mai/2024 · Mai/2025 · Mar/2024 · Mar/2025 · Nov/2024 · Nov/2025 · Out/2024 · Out/2025 · Set/2024 · Set/2025</span></div>
+    </div>
+  </div><div class="kpi-grid">
+    <div class="kpi"><div class="kpi-lbl">Receita Bruta</div><div class="kpi-val pos">R$ 14.63 Mi</div><div class="kpi-sub">Período selecionado</div></div>
+    <div class="kpi g"><div class="kpi-lbl">EBITDA</div><div class="kpi-val pos">R$ 6.40 Mi</div><div class="kpi-sub">Ajustado: R$ 6.40 Mi</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Lucro Líquido</div><div class="kpi-val pos">R$ 7.46 Mi</div><div class="kpi-sub">Margem: 51.0%</div></div>
+    <div class="kpi o"><div class="kpi-lbl">NOI Shopping</div><div class="kpi-val ">R$ 0</div><div class="kpi-sub">Margem NOI: 0.0%</div></div>
+    <div class="kpi g"><div class="kpi-lbl">Dívida Líquida</div><div class="kpi-val pos">R$ -926.317</div><div class="kpi-sub">Dív/EBITDA: -0.14x</div></div>
+    <div class="kpi"><div class="kpi-lbl">Cobertura Juros</div><div class="kpi-val">36.79x</div><div class="kpi-sub">EBITDA / Desp. Financeira</div></div>
+    <div class="kpi r"><div class="kpi-lbl">Encerramento de Resultado</div><div class="kpi-val" style="font-size:16px">⚠ Pendente</div><div class="kpi-sub">Diferença: R$ 14.91 Mi</div></div>
+    <div class="kpi r"><div class="kpi-lbl">Valores Não Mapeados</div><div class="kpi-val neg" style="font-size:16px">R$ 0</div><div class="kpi-sub">435 conta(s) sem de-para — ver Conferência</div></div>
+  </div><div class="chart-grid">
+    <div class="chart-card"><div class="chart-ttl">Evolução Mensal — Receita Bruta e EBITDA</div><div class="chart-box"><canvas id="ch-rec-ebitda" width="409" height="231" style="display: block; box-sizing: border-box; height: 210px; width: 371px;"></canvas></div></div>
+    <div class="chart-card"><div class="chart-ttl">Composição da DRE</div><div class="chart-box"><canvas id="ch-dre-comp" width="409" height="231" style="display: block; box-sizing: border-box; height: 210px; width: 371px;"></canvas></div></div>
+  </div></div>
+  <div class="tab-pane" id="tab-bp">
+    <div class="sec">
+      <div class="sec-hdr" style="padding-bottom:0;border-bottom:none">
+        <span class="sec-ttl">Balancete — Balanço Patrimonial (Class. DF)</span>
+        <button class="btn btn-grn btn-sm" onclick="expBP()">↓ Excel</button>
+      </div>
+      <div class="bp-toolbar">
+        <div class="dre-yr-pills"><span class="dre-yr-lbl">Ano</span><button class="yr-pill" onclick="bpToggleAno(2026)">2026</button><button class="yr-pill on" onclick="bpToggleAno(2025)">2025</button><button class="yr-pill" onclick="bpToggleAno(2024)">2024</button></div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th style="min-width:340px">Class. DF / Descrição</th><th class="num">Saldo 2025</th><th class="num">% Ativo</th></tr></thead>
+          <tbody><tr class="t0"><td>ATIVO</td><td class="num pos">R$ 607.280.792</td><td class="num">—</td></tr><tr class="t1 tr-sub"><td>▸ Ativo Circulante</td><td class="num pos">R$ 217.457.520</td><td class="num">—</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A1</span>Caixa e equivalentes de caixa</td><td class="num pos">R$ 19.411.688</td><td class="num">3.2%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A2</span>Contas a receber de clientes</td><td class="num pos">R$ 217.457.049</td><td class="num">35.8%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A4</span>Créditos diversos</td><td class="num pos">R$ 67.464.195</td><td class="num">11.1%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A3</span>Tributos a recuperar</td><td class="num pos">R$ 8.191.453</td><td class="num">1.3%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A5</span>Partes relacionadas</td><td class="num neg">R$ -155.479.742</td><td class="num">25.6%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A6</span>Terrenos e imóveis a comercializar</td><td class="num pos">R$ 60.412.479</td><td class="num">9.9%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A7</span>Outros ativos</td><td class="num pos">R$ 398</td><td class="num">0.0%</td></tr><tr class="t1 tr-sub"><td>▸ Ativo Não Circulante (Realizável a Longo Prazo)</td><td class="num pos">R$ 389.823.272</td><td class="num">—</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A18</span>Contas a receber de clientes</td><td class="num pos">R$ 155.479.742</td><td class="num">25.6%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A20</span>Terrenos e imóveis a comercializar</td><td class="num pos">R$ 58.680.240</td><td class="num">9.7%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A11</span>Partes relacionadas</td><td class="num pos">R$ 154.293.238</td><td class="num">25.4%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A17</span>Depósitos judiciais</td><td class="num pos">R$ 5.114.206</td><td class="num">0.8%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A13</span>Investimento</td><td class="num pos">R$ 1</td><td class="num">0.0%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A15</span>Propriedade para Investimento</td><td class="num pos">R$ 8.001.103</td><td class="num">1.3%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">A14</span>Imobilizado</td><td class="num pos">R$ 8.254.743</td><td class="num">1.4%</td></tr><tr class="t0 tr-hl"><td>Total do Ativo</td><td class="num pos">R$ 607.280.792</td><td class="num">—</td></tr><tr class="t0"><td>PASSIVO</td><td class="num pos">R$ 485.420.702</td><td class="num">—</td></tr><tr class="t1 tr-sub"><td>▸ Passivo Circulante</td><td class="num pos">R$ 76.095.185</td><td class="num">—</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P4</span>Empréstimos e financiamentos</td><td class="num pos">R$ 121.554</td><td class="num">0.0%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P1</span>Fornecedores</td><td class="num pos">R$ 6.521.805</td><td class="num">1.1%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P2</span>Obrigações trabalhistas e tributárias</td><td class="num pos">R$ 15.123.788</td><td class="num">2.5%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P5</span>Receitas diferidas</td><td class="num pos">R$ 36.337.987</td><td class="num">6.0%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P6</span>Obrigações com partes relacionadas</td><td class="num pos">R$ 470.466</td><td class="num">0.1%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P3</span>Outras contas a pagar</td><td class="num pos">R$ 17.519.585</td><td class="num">2.9%</td></tr><tr class="t1 tr-sub"><td>▸ Passivo Não Circulante</td><td class="num pos">R$ 409.325.517</td><td class="num">—</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P4.1</span>Empréstimos e financiamentos</td><td class="num pos">R$ 11.667.000</td><td class="num">1.9%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P11</span>Provisões para contingências</td><td class="num pos">R$ 28.845.474</td><td class="num">4.7%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P12</span>Obrigações com partes relacionadas</td><td class="num pos">R$ 192.588.835</td><td class="num">31.7%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P2.1</span>Obrigações trabalhistas e tributárias</td><td class="num pos">R$ 994.624</td><td class="num">0.2%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P13</span>Receitas diferidas</td><td class="num pos">R$ 145.960.479</td><td class="num">24.0%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P8</span>Perdas em investimentos</td><td class="num pos">R$ 7</td><td class="num">0.0%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P17</span>Outros passivos</td><td class="num pos">R$ 29.269.100</td><td class="num">4.8%</td></tr><tr class="t0 tr-hl"><td>Total do Passivo</td><td class="num pos">R$ 485.420.702</td><td class="num">—</td></tr><tr class="t0"><td>PATRIMÔNIO LÍQUIDO</td><td class="num pos">R$ 76.163.966</td><td class="num">—</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P24</span>Capital social</td><td class="num pos">R$ 400.274.213</td><td class="num">65.9%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P26</span>AFAC</td><td class="num neg">R$ -0</td><td class="num">0.0%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P25</span>Reserva de lucros</td><td class="num neg">R$ -1</td><td class="num">0.0%</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P28</span>Prejuízos acumulados</td><td class="num neg">R$ -324.110.246</td><td class="num">53.4%</td></tr><tr class="t0 tr-hl"><td>Total do Patrimônio Líquido</td><td class="num pos">R$ 76.163.966</td><td class="num">—</td></tr><tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">P27</span>Participação de não controladores</td><td class="num pos">R$ 27.095.506</td><td class="num">—</td></tr><tr class="t2" style="background:#f7f9fc">
+        <td colspan="3" style="padding:4px 12px">
+          <details>
+            <summary style="cursor:pointer;font-size:11px;color:var(--navy);font-weight:600">
+              🔎 Detalhamento P27 por coligada
+            </summary>
+            <div style="margin-top:6px;overflow-x:auto">
+              <table style="border-collapse:collapse;width:100%">
+                <thead><tr style="background:#eef2f7;font-size:11px">
+                  <th style="padding:3px 8px;text-align:left">Ano</th>
+                  <th style="padding:3px 8px;text-align:left">CODCOLIGADA</th>
+                  <th style="padding:3px 8px;text-align:left">Empresa</th>
+                  <th style="padding:3px 8px;text-align:right">Base PL (P25–P30)</th>
+                  <th style="padding:3px 8px;text-align:right">Fração %</th>
+                  <th style="padding:3px 8px;text-align:right">Valor P27</th>
+                </tr></thead>
+                <tbody><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">13</td>
+        <td style="padding:3px 8px">SPE.SPC - JACAREPAGUA I LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -22.356.323</td>
+        <td style="padding:3px 8px;text-align:right">0.22%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -49.184</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">21</td>
+        <td style="padding:3px 8px">SPE-CONSTRUTORA SA CAVALCANTE-ES X LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -82.684</td>
+        <td style="padding:3px 8px;text-align:right">26.00%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -21.498</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">22</td>
+        <td style="padding:3px 8px">SPE-CONSTRUTORA SA CAVALCANTE-ES XV LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -2.273.544</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -227</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">23</td>
+        <td style="padding:3px 8px">SPE-CONSTRUTORA SA CAVALCANTE-ES XVI LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -5.331.838</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -533</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">24</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE - ES XIV LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -2.910.460</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -291</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">25</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE - ES XX LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -2.361.478</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -236</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">26</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE - ES XIX LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -3.571.064</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -357</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">29</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE - ES XII LTDA.</td>
+        <td style="padding:3px 8px;text-align:right">R$ -153.916</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -15</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">30</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE - ES XIII LTDA.</td>
+        <td style="padding:3px 8px;text-align:right">R$ -30.435.519</td>
+        <td style="padding:3px 8px;text-align:right">0.68%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -206.962</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">31</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE - ES XVII LTDA.</td>
+        <td style="padding:3px 8px;text-align:right">R$ -549.533</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -55</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">33</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE - ES XXI LTDA.</td>
+        <td style="padding:3px 8px;text-align:right">R$ -2.542.232</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -254</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">34</td>
+        <td style="padding:3px 8px">SPE - SA CAVALCANTE INCORPORACOES IMOBILIARIAS MA X LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -44.099.959</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -4.410</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">35</td>
+        <td style="padding:3px 8px">SPE SA CAVALCANTE INCORPORACOES IMOBILIARIAS MA XI LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -357.997</td>
+        <td style="padding:3px 8px;text-align:right">21.33%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -76.361</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">36</td>
+        <td style="padding:3px 8px">SPE SA CAVALCANTE INCORPORACOES IMOBILIARIAS MA XII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -43.027.957</td>
+        <td style="padding:3px 8px;text-align:right">0.10%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -43.028</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">37</td>
+        <td style="padding:3px 8px">SPE SA CAVALCANTE INCORPORACOES IMOBILIARIAS MA XIII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -34.708.283</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -3.471</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">41</td>
+        <td style="padding:3px 8px">SPE - VILA VELHA 05</td>
+        <td style="padding:3px 8px;text-align:right">R$ -19.810.732</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1.981</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">44</td>
+        <td style="padding:3px 8px">SA CAVALCANTE EMPREENDIMENTOS LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -70.747.559</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -7.075</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">48</td>
+        <td style="padding:3px 8px">SPE - AREINHA INCORPORAÇÕES IMOBILIÁRIAS LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -16.849.742</td>
+        <td style="padding:3px 8px;text-align:right">0.11%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -18.535</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">52</td>
+        <td style="padding:3px 8px">SPE. RENASCENCA BICUDOS INCORPORACOES IMOBILIARIAS LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -10.089.452</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1.009</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">59</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LXII - PI LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -2.771.925</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -277</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">64</td>
+        <td style="padding:3px 8px">SPE CONSTRUTORA SA CAVALCANTE LVIII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ 7.970.491</td>
+        <td style="padding:3px 8px;text-align:right">18.54%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ 1.477.729</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">65</td>
+        <td style="padding:3px 8px">SPE - CONST. SA CAVALCANTE LII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -3.176</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -0</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">66</td>
+        <td style="padding:3px 8px">SPE CONSTRUTORA SA CAVALCANTE LIII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -8.459.508</td>
+        <td style="padding:3px 8px;text-align:right">1.67%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -141.274</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">67</td>
+        <td style="padding:3px 8px">SPE CONSTRUTORA SA CAVALCANTE LVII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ 13.977.625</td>
+        <td style="padding:3px 8px;text-align:right">0.31%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ 43.331</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">69</td>
+        <td style="padding:3px 8px">SA CAVALCANTE VENDAS LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -17.160.287</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1.716</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">70</td>
+        <td style="padding:3px 8px">SPE CONSTRUTORA SA CAVALCANTE L LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -18.989.826</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1.899</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">72</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LIV LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -7.612.605</td>
+        <td style="padding:3px 8px;text-align:right">0.07%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -5.329</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">73</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -5.223</td>
+        <td style="padding:3px 8px;text-align:right">0.10%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -5</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">76</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SÁ CAVALCANTE LXXV LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -2.171.724</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -217</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">77</td>
+        <td style="padding:3px 8px">SPE CONSTRUTORA SA CAVALCANTE LVI LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ 329.576</td>
+        <td style="padding:3px 8px;text-align:right">0.02%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ 66</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">78</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LX LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -26.821</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -3</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">79</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE 95 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -45.761</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -17.270</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">80</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXIII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -3.698</td>
+        <td style="padding:3px 8px;text-align:right">12.34%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -456</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">81</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXIV LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -4.235</td>
+        <td style="padding:3px 8px;text-align:right">42.96%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1.819</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">82</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXV LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -12.279</td>
+        <td style="padding:3px 8px;text-align:right">42.96%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -5.275</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">83</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LV LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -48.669</td>
+        <td style="padding:3px 8px;text-align:right">50.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -24.339</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">84</td>
+        <td style="padding:3px 8px">NOVA SAO LUIS EMPREENDIMENTOS IMOBILIARIOS LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -651.491</td>
+        <td style="padding:3px 8px;text-align:right">0.56%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -3.655</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">85</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXVII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -11.379</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -4.294</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">86</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXVIII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -11.769</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -4.442</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">87</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXIX LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -11.449</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -4.321</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">88</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LXX LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -11.769</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -4.442</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">89</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXXI LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -11.739</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -4.430</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">90</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXXII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -4.518</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1.705</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">91</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXXIII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -12.269</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -4.630</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">92</td>
+        <td style="padding:3px 8px">SPE. CONSTRUTORA SA CAVALCANTE LXXIV LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ 1.172.874</td>
+        <td style="padding:3px 8px;text-align:right">37.74%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ 442.643</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">93</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LXXVI LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -531.618</td>
+        <td style="padding:3px 8px;text-align:right">63.28%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -336.408</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">96</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LXXIX LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -10.098</td>
+        <td style="padding:3px 8px;text-align:right">98.77%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -9.974</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">97</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LXXVII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -20.461</td>
+        <td style="padding:3px 8px;text-align:right">89.36%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -18.284</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">98</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LXXVIII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ 1.818</td>
+        <td style="padding:3px 8px;text-align:right">98.42%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ 1.789</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">99</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SÁ CAVALCANTE LXXXII LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -898.001</td>
+        <td style="padding:3px 8px;text-align:right">71.70%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -643.867</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">100</td>
+        <td style="padding:3px 8px">JC I EMPREENDIMENTO SPE LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -6.453.180</td>
+        <td style="padding:3px 8px;text-align:right">60.00%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -3.871.908</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">102</td>
+        <td style="padding:3px 8px">SA CAVALCANTE VENDA II LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -5.519</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">110</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 84 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -10.098</td>
+        <td style="padding:3px 8px;text-align:right">98.77%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -9.974</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">111</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 85 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -10.098</td>
+        <td style="padding:3px 8px;text-align:right">98.77%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -9.974</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">112</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE LXI LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -576.696</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -58</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">122</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 86 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -10.099</td>
+        <td style="padding:3px 8px;text-align:right">99.79%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -10.078</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">123</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 92 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -10.099</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">125</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 94 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -26.779</td>
+        <td style="padding:3px 8px;text-align:right">0.01%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -3</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">128</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 88 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ 31.372.255</td>
+        <td style="padding:3px 8px;text-align:right">98.10%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ 30.776.182</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">129</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 89 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -47.706</td>
+        <td style="padding:3px 8px;text-align:right">98.10%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -46.799</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">130</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 90 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -10.200</td>
+        <td style="padding:3px 8px;text-align:right">98.10%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -10.006</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">131</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALCANTE 91 LTDA</td>
+        <td style="padding:3px 8px;text-align:right">R$ -10.098</td>
+        <td style="padding:3px 8px;text-align:right">98.10%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -9.906</td>
+      </tr><tr style="font-size:11px">
+        <td style="padding:3px 8px">2025</td>
+        <td style="padding:3px 8px;font-family:monospace">150</td>
+        <td style="padding:3px 8px">SPE - CONSTRUTORA SA CAVALANTE 87</td>
+        <td style="padding:3px 8px;text-align:right">R$ -1.746</td>
+        <td style="padding:3px 8px;text-align:right">98.10%</td>
+        <td style="padding:3px 8px;text-align:right;font-weight:700">R$ -1.713</td>
+      </tr></tbody>
+              </table>
+            </div>
+          </details>
+        </td>
+      </tr><tr class="t0 tr-hl"><td>Total do Passivo e Patrimônio Líquido</td><td class="num pos">R$ 588.680.174</td><td class="num">—</td></tr><tr class="t0" style="background:#f0fff4!important">
+    <td>🔍 Verificação: Ativo – (Passivo + PL + P27)</td>
+    <td class="num neg">
+      R$ 18.600.618 ⚠ Verificar
+    </td><td></td>
+  </tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-ttl">Composição do Ativo</div><div class="chart-box"><canvas id="ch-bp-ativo" width="409" height="231" style="display: block; box-sizing: border-box; height: 210px; width: 371px;"></canvas></div></div>
+      <div class="chart-card"><div class="chart-ttl">Passivo + PL</div><div class="chart-box"><canvas id="ch-bp-passivo" width="409" height="231" style="display: block; box-sizing: border-box; height: 210px; width: 371px;"></canvas></div></div>
+    </div></div>
   <div class="tab-pane" id="tab-dre"></div>
   <div class="tab-pane" id="tab-ind"></div>
   <div class="tab-pane" id="tab-end"></div>
-  <div class="tab-pane" id="tab-conf"></div>
+  <div class="tab-pane on" id="tab-conf">
+    <div class="conf-tabs">
+      <button class="conf-tab-btn" onclick="goConfTab(&#39;contas&#39;,this)">🔍 Conferência Contábil</button>
+      <button class="conf-tab-btn on" onclick="goConfTab(&#39;p27&#39;,this)">📊 Conferência P27<span style="background:var(--green);color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:6px">✓</span></button>
+    </div>
+    <div class="conf-sub-pane" id="conf-pane-contas"></div>
+    <div class="conf-sub-pane on" id="conf-pane-p27">
+    <div class="sec">
+      <div class="sec-hdr">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="sec-ttl">📊 Conferência P27 — Participação de Não Controladores por Coligada</span>
+          <span style="background:var(--green);color:#fff;border-radius:10px;padding:2px 10px;font-size:11px;font-weight:700">✓ Completo</span>
+        </div>
+        <button class="btn btn-grn btn-sm" onclick="expP27Conf()">↓ Excel P27</button>
+      </div>
+      <div style="padding:14px 18px 0">
+        <div style="font-size:11px;color:var(--gray-m);margin-bottom:10px">
+          Base de cálculo: soma dos grupos <strong>P25 + P26 + P28 + P29 + P30</strong> por CODCOLIGADA × ANO (P24 Capital Social excluído) ·
+          Fração lida da aba <strong>"Participação de não controlador"</strong> no CONTAS DF.xlsx ·
+          Valor P27 = Base × Fração
+        </div>
+        <div class="p27-alert-ok">✅ Todas as coligadas com fração de P27 mapeada.</div>
+        
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div class="kpi o" style="min-width:160px">
+        <div class="kpi-lbl">Total P27 (todos os anos)</div>
+        <div class="kpi-val">R$ 27.095.506</div>
+      </div>
+      <div class="kpi" style="min-width:140px;border-left-color:var(--navy)">
+        <div class="kpi-lbl">Coligadas</div>
+        <div class="kpi-val" style="color:var(--navy)">63</div>
+      </div>
+      <div class="kpi g" style="min-width:160px">
+        <div class="kpi-lbl">Com fração mapeada</div>
+        <div class="kpi-val">63 / 63 registros</div>
+      </div>
+    </div>
+      </div>
+      <div class="tbl-wrap" style="max-height:560px">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:55px">Ano</th>
+              <th style="width:110px">CODCOLIGADA</th>
+              <th>Empresa</th>
+              <th class="num">Base PL (P25–P30)</th>
+              <th class="num">Fração %</th>
+              <th class="num">Valor P27</th>
+            </tr>
+          </thead>
+          <tbody><tr class="p27-yr-hdr">
+      <td colspan="6" style="padding:7px 14px">
+        📅 2025
+        <span style="margin-left:16px;font-weight:400;font-size:11px;opacity:.85">Total P27: R$ 27.095.506</span>
+        
+      </td>
+    </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">13</td>
+        <td style="padding:6px 10px;font-size:12px">SPE.SPC - JACAREPAGUA I LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -22.356.323</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.22%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -49.184
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">21</td>
+        <td style="padding:6px 10px;font-size:12px">SPE-CONSTRUTORA SA CAVALCANTE-ES X LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -82.684</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          26.00%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -21.498
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">22</td>
+        <td style="padding:6px 10px;font-size:12px">SPE-CONSTRUTORA SA CAVALCANTE-ES XV LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -2.273.544</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -227
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">23</td>
+        <td style="padding:6px 10px;font-size:12px">SPE-CONSTRUTORA SA CAVALCANTE-ES XVI LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -5.331.838</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -533
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">24</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE - ES XIV LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -2.910.460</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -291
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">25</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE - ES XX LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -2.361.478</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -236
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">26</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE - ES XIX LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -3.571.064</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -357
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">29</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE - ES XII LTDA.</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -153.916</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -15
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">30</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE - ES XIII LTDA.</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -30.435.519</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.68%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -206.962
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">31</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE - ES XVII LTDA.</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -549.533</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -55
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">33</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE - ES XXI LTDA.</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -2.542.232</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -254
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">34</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - SA CAVALCANTE INCORPORACOES IMOBILIARIAS MA X LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -44.099.959</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -4.410
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">35</td>
+        <td style="padding:6px 10px;font-size:12px">SPE SA CAVALCANTE INCORPORACOES IMOBILIARIAS MA XI LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -357.997</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          21.33%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -76.361
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">36</td>
+        <td style="padding:6px 10px;font-size:12px">SPE SA CAVALCANTE INCORPORACOES IMOBILIARIAS MA XII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -43.027.957</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.10%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -43.028
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">37</td>
+        <td style="padding:6px 10px;font-size:12px">SPE SA CAVALCANTE INCORPORACOES IMOBILIARIAS MA XIII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -34.708.283</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -3.471
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">41</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - VILA VELHA 05</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -19.810.732</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1.981
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">44</td>
+        <td style="padding:6px 10px;font-size:12px">SA CAVALCANTE EMPREENDIMENTOS LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -70.747.559</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -7.075
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">48</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - AREINHA INCORPORAÇÕES IMOBILIÁRIAS LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -16.849.742</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.11%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -18.535
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">52</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. RENASCENCA BICUDOS INCORPORACOES IMOBILIARIAS LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -10.089.452</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1.009
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">59</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LXII - PI LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -2.771.925</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -277
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">64</td>
+        <td style="padding:6px 10px;font-size:12px">SPE CONSTRUTORA SA CAVALCANTE LVIII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ 7.970.491</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          18.54%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ 1.477.729
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">65</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONST. SA CAVALCANTE LII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -3.176</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -0
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">66</td>
+        <td style="padding:6px 10px;font-size:12px">SPE CONSTRUTORA SA CAVALCANTE LIII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -8.459.508</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          1.67%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -141.274
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">67</td>
+        <td style="padding:6px 10px;font-size:12px">SPE CONSTRUTORA SA CAVALCANTE LVII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ 13.977.625</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.31%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ 43.331
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">69</td>
+        <td style="padding:6px 10px;font-size:12px">SA CAVALCANTE VENDAS LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -17.160.287</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1.716
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">70</td>
+        <td style="padding:6px 10px;font-size:12px">SPE CONSTRUTORA SA CAVALCANTE L LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -18.989.826</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1.899
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">72</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LIV LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -7.612.605</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.07%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -5.329
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">73</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -5.223</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.10%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -5
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">76</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SÁ CAVALCANTE LXXV LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -2.171.724</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -217
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">77</td>
+        <td style="padding:6px 10px;font-size:12px">SPE CONSTRUTORA SA CAVALCANTE LVI LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ 329.576</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.02%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ 66
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">78</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LX LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -26.821</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -3
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">79</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE 95 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -45.761</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -17.270
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">80</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXIII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -3.698</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          12.34%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -456
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">81</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXIV LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -4.235</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          42.96%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1.819
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">82</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXV LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -12.279</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          42.96%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -5.275
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">83</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LV LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -48.669</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          50.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -24.339
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">84</td>
+        <td style="padding:6px 10px;font-size:12px">NOVA SAO LUIS EMPREENDIMENTOS IMOBILIARIOS LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -651.491</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.56%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -3.655
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">85</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXVII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -11.379</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -4.294
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">86</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXVIII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -11.769</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -4.442
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">87</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXIX LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -11.449</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -4.321
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">88</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LXX LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -11.769</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -4.442
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">89</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXXI LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -11.739</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -4.430
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">90</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXXII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -4.518</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1.705
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">91</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXXIII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -12.269</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -4.630
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">92</td>
+        <td style="padding:6px 10px;font-size:12px">SPE. CONSTRUTORA SA CAVALCANTE LXXIV LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ 1.172.874</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          37.74%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ 442.643
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">93</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LXXVI LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -531.618</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          63.28%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -336.408
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">96</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LXXIX LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -10.098</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.77%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -9.974
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">97</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LXXVII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -20.461</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          89.36%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -18.284
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">98</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LXXVIII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ 1.818</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.42%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ 1.789
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">99</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SÁ CAVALCANTE LXXXII LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -898.001</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          71.70%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -643.867
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">100</td>
+        <td style="padding:6px 10px;font-size:12px">JC I EMPREENDIMENTO SPE LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -6.453.180</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          60.00%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -3.871.908
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">102</td>
+        <td style="padding:6px 10px;font-size:12px">SA CAVALCANTE VENDA II LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -5.519</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">110</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 84 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -10.098</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.77%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -9.974
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">111</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 85 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -10.098</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.77%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -9.974
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">112</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE LXI LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -576.696</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -58
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">122</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 86 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -10.099</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          99.79%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -10.078
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">123</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 92 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -10.099</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">125</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 94 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -26.779</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          0.01%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -3
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">128</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 88 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ 31.372.255</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.10%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ 30.776.182
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">129</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 89 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -47.706</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.10%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -46.799
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">130</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 90 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -10.200</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.10%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -10.006
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">131</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALCANTE 91 LTDA</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -10.098</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.10%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -9.906
+        </td>
+      </tr><tr class="">
+        <td style="font-family:monospace;font-size:11px;padding:6px 10px;color:var(--gray-m)">2025</td>
+        <td style="font-family:monospace;font-size:12px;padding:6px 10px;font-weight:700;color:var(--navy)">150</td>
+        <td style="padding:6px 10px;font-size:12px">SPE - CONSTRUTORA SA CAVALANTE 87</td>
+        <td class="num" style="padding:6px 10px;font-size:12px">R$ -1.746</td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--navy)">
+          98.10%
+        </td>
+        <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--green)">
+          R$ -1.713
+        </td>
+      </tr><tr class="p27-subtotal">
+      <td colspan="3" style="padding:6px 14px;font-size:12px">Subtotal 2025</td>
+      <td class="num" style="padding:6px 10px;font-size:12px">R$ -324.110.247</td>
+      <td class="num" style="padding:6px 10px">—</td>
+      <td class="num" style="padding:6px 10px;font-size:13px;color:var(--navy)">R$ 27.095.506</td>
+    </tr>
+    <tr><td colspan="6" style="padding:2px;background:#f8f9fa"></td></tr><tr style="background:var(--navy-d);color:#fff;font-weight:700">
+    <td colspan="3" style="padding:8px 14px;font-size:13px">TOTAL GERAL</td>
+    <td class="num" style="padding:8px 10px;font-size:13px">R$ -324.110.247</td>
+    <td class="num" style="padding:8px 10px">—</td>
+    <td class="num" style="padding:8px 10px;font-size:14px">R$ 27.095.506</td>
+  </tr></tbody>
+        </table>
+      </div>
+    </div></div></div>
 </div>
 
 <script>
@@ -3000,6 +4347,15 @@ function checkProc(){
 // INICIALIZAÇÃO — restaura vínculos salvos ao carregar a página
 // ─────────────────────────────────────────────────────────────
 async function initUploadScreen(){
+  ldgHide(); // FIX: loader começa OFF; só ativa via runProcess()
+  // file:// não suporta IDB/FileSystemHandle cross-origin — usa só localStorage
+  if(location.protocol==='file:'){
+    ['p1','p2','p3'].forEach((k,i)=>{
+      const n=i+1,v=localStorage.getItem(k);
+      if(v){_setPath(n,v);const h=document.getElementById(`s${n}-hint`);if(h)h.style.display='none';}
+    });
+    return;
+  }
   // Tenta restaurar estado processado anteriormente
   try{
     const appState=await idbLoad('appState');
@@ -3027,7 +4383,6 @@ async function initUploadScreen(){
     });
     return;
   }
-  if(location.protocol==='file:') return; // FIX: queryPermission() em FileSystemHandle via IDB causa erro cross-origin no Chrome (file:// trata cada URL como origem única)
   // Para cada handle salvo, tenta restaurar silenciosamente
   const handles=await Promise.all([idbLoad('h1'),idbLoad('h2'),idbLoad('h3')]);
   for(let i=0;i<3;i++){
@@ -3186,7 +4541,7 @@ document.addEventListener('DOMContentLoaded',()=>{ initUploadScreen(); });
 </script>
 
 <!-- ── Footer ────────────────────────────────────────────────── -->
-<footer class="app-ftr" id="app-footer">
+<footer class="app-ftr" id="app-footer" style="display: flex;">
   <div>
     <div class="ftr-brand">Grupo Sá Cavalcante</div>
     <div class="ftr-meta">Holding · Shoppings · Incorporadora</div>
