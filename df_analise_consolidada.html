@@ -868,7 +868,10 @@ const Ingestion = {
     const _estacFiles = files.filter(f => f.name.toLowerCase().includes('reportado') && /\.(xlsx|xls)$/i.test(f.name));
     console.log("[Estac] total recebidos:", files.length, "| Reportado:", _estacFiles.length);
     if(_estacFiles.length === 0){ console.warn("[Estac] Nenhum arquivo Reportado encontrado."); return []; }
-    for(const f of files){
+    for(let _fi=0;_fi<_estacFiles.length;_fi++){ // FIX: itera lista já filtrada (_estacFiles), não o array original
+      const f=_estacFiles[_fi];
+      ldgShow(`Lendo estacionamento (${_fi+1}/${_estacFiles.length})...`,'Pode levar alguns segundos'); // FIX: progresso visual por arquivo
+      await new Promise(r=>setTimeout(r,0)); // FIX: libera UI a cada iteração
       if(!f.name.toLowerCase().includes('reportado')) continue;
       if(!f.name.match(/\.(xlsx|xls)$/i)) continue;
 
@@ -3074,9 +3077,10 @@ async function runProcess(){
     ldgShow('Aplicando classificações de empresa e regras contábeis...');
 
     // 3. Parse estacionamento (opcional)
-    if(App.files.estacionamento.length>0){
-      ldgShow('Lendo arquivos de estacionamento...','Apenas arquivos "Reportado"');
-      App.raw.estacionamento=await Ingestion.parseEstacionamento(App.files.estacionamento);
+    const estacFiltrados=App.files.estacionamento.filter(f=>/reportado/i.test(f.name)&&/\.(xlsx|xls)$/i.test(f.name)); // FIX: pré-filtra Reportado .xlsx/.xls antes de passar à função
+    if(estacFiltrados.length>0){
+      ldgShow(`Lendo estacionamento (0/${estacFiltrados.length})...`,'Apenas arquivos "Reportado"'); // FIX: mostra total real filtrado
+      App.raw.estacionamento=await Ingestion.parseEstacionamento(estacFiltrados); // FIX: passa só os filtrados
     }
 
     // 4. Classificar empresas
