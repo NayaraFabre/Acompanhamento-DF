@@ -3028,6 +3028,7 @@ async function initUploadScreen(){
     });
     return;
   }
+  if(location.protocol==='file:') return; // FIX: queryPermission() em FileSystemHandle via IDB causa erro cross-origin no Chrome (file:// trata cada URL como origem única)
   // Para cada handle salvo, tenta restaurar silenciosamente
   const handles=await Promise.all([idbLoad('h1'),idbLoad('h2'),idbLoad('h3')]);
   for(let i=0;i<3;i++){
