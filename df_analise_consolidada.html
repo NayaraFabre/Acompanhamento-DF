@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- saved from url=(0120)https://tess-workflows-files.storage.googleapis.com/5fec608f0e4d346f7f9839243af464c7ae98100a/df_analise_consolidada.html -->
 <html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <style>
 /* Fonte segura para uso offline via file:// - Inter fallback */
@@ -10219,6 +10220,7 @@ function _idbOpen(){
   });
 }
 async function idbSave(key,val){
+  if(location.protocol==='file:') return; // FIX: IDB bloqueado em file://
   const db=await _idbOpen();
   return new Promise((res,rej)=>{
     const tx=db.transaction(_IDB.store,'readwrite');
@@ -10227,6 +10229,7 @@ async function idbSave(key,val){
   });
 }
 async function idbLoad(key){
+  if(location.protocol==='file:') return null; // FIX: IDB bloqueado em file://
   const db=await _idbOpen();
   return new Promise((res,rej)=>{
     const tx=db.transaction(_IDB.store,'readonly');
@@ -10236,6 +10239,7 @@ async function idbLoad(key){
   });
 }
 async function idbDel(key){
+  if(location.protocol==='file:') return; // FIX: IDB bloqueado em file://
   const db=await _idbOpen();
   return new Promise((res,rej)=>{
     const tx=db.transaction(_IDB.store,'readwrite');
@@ -10245,7 +10249,7 @@ async function idbDel(key){
 }
 
 // ── Detecção de suporte ──────────────────────────────────────
-const FSA_OK=typeof window.showOpenFilePicker==='function'&&typeof window.showDirectoryPicker==='function';
+const FSA_OK=location.protocol!=='file:'&&typeof window.showOpenFilePicker==='function'&&typeof window.showDirectoryPicker==='function'; // FIX: file:// usa fallback input
 
 // ── Fingerprint de arquivos (para detectar alterações) ──────
 function _fp(files){return files.map(f=>`${f.name}|${f.size}|${f.lastModified}`).sort().join('~');}
@@ -10285,380 +10289,4 @@ function _setOk(n,label){
   const ok=document.getElementById(`s${n}-ok`);
   const step=document.getElementById(`s${n}`);
   const ref=document.getElementById(`btn-ref${n}`);
-  if(label){ok.textContent='✓ '+label;step.classList.add('ok');if(ref)ref.disabled=false;}
-  else{ok.textContent='';step.classList.remove('ok');if(ref)ref.disabled=true;}
-}
-
-// ── Verificação de permissão de handle ──────────────────────
-async function _ensurePermission(handle){
-  if(!handle) return false;
-  let perm=await handle.queryPermission({mode:'read'});
-  if(perm==='granted') return true;
-  perm=await handle.requestPermission({mode:'read'});
-  return perm==='granted';
-}
-
-// ─────────────────────────────────────────────────────────────
-// ITEM 1 — CONTAS DF
-// ─────────────────────────────────────────────────────────────
-async function linkContas(){
-  if(!FSA_OK){document.getElementById('fi-contas-fb').click();return;}
-  try{
-    const[fh]=await window.showOpenFilePicker({
-      types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx','.xls']}}],
-      multiple:false
-    });
-    await idbSave('h1',fh);
-    localStorage.setItem('p1',fh.name);
-    await _loadContas(fh);
-  }catch(e){if(e.name!=='AbortError')_setStatus(1,'Erro ao vincular','upd-err');}
-}
-async function _loadContas(fh){
-  _setStatus(1,'Lendo...','upd-inf');
-  try{
-    const ok=await _ensurePermission(fh);
-    if(!ok){_setStatus(1,'Permissão negada','upd-err');return;}
-    const f=await fh.getFile();
-    App.files.contas=f;
-    _setPath(1,fh.name);
-    _setOk(1,fh.name);
-    _setStatus(1,'✅ Pronto','upd-ok');
-    localStorage.setItem('p1',fh.name);
-    checkProc();
-  }catch(e){_setStatus(1,'Erro ao ler arquivo','upd-err');console.error(e);}
-}
-
-// Fallback (browsers sem FSA)
-function onContasFileFb(inp){
-  if(!inp.files.length) return;
-  const f=inp.files[0];
-  App.files.contas=f;
-  localStorage.setItem('p1',f.name);
-  _setPath(1,f.name);_setOk(1,f.name);_setStatus(1,'✅ Pronto','upd-ok');
-  checkProc();
-}
-
-// ─────────────────────────────────────────────────────────────
-// ITEM 2 — BALANCETES
-// ─────────────────────────────────────────────────────────────
-async function linkBal(){
-  if(!FSA_OK){document.getElementById('fi-bal-fb').click();return;}
-  try{
-    const dh=await window.showDirectoryPicker({mode:'read'});
-    await idbSave('h2',dh);
-    localStorage.setItem('p2',dh.name);
-    await _loadBal(dh);
-  }catch(e){if(e.name!=='AbortError')_setStatus(2,'Erro ao vincular','upd-err');}
-}
-async function _loadBal(dh){
-  _setStatus(2,'Lendo pasta...','upd-inf');
-  try{
-    const ok=await _ensurePermission(dh);
-    if(!ok){_setStatus(2,'Permissão negada','upd-err');return;}
-    const files=await _dirFiles(dh,'');
-    const xlsx=files.filter(f=>f.name.match(/\.(xlsx|xls)$/i));
-    const prevFp=localStorage.getItem('fp2')||'';
-    const newFp=_fp(xlsx);
-    const changed=prevFp&&newFp!==prevFp;
-    App.files.balancetes=xlsx;
-    _setPath(2,dh.name);
-    _setOk(2,`${xlsx.length} arquivo${xlsx.length!==1?'s':''}`);
-    _setStatus(2,prevFp?(changed?`✅ Atualizado (${xlsx.length} arquivos)`:'ℹ️ Sem alterações'):`✅ ${xlsx.length} arquivos carregados`,'upd-ok');
-    localStorage.setItem('fp2',newFp);
-    localStorage.setItem('p2',dh.name);
-    checkProc();
-  }catch(e){_setStatus(2,'Erro ao ler pasta','upd-err');console.error(e);}
-}
-function onBalFilesFb(inp){
-  const files=Array.from(inp.files).filter(f=>f.name.match(/\.(xlsx|xls)$/i));
-  App.files.balancetes=files;
-  localStorage.setItem('fp2',_fp(files));
-  localStorage.setItem('p2','pasta selecionada');
-  _setPath(2,'pasta selecionada');_setOk(2,`${files.length} arquivo${files.length!==1?'s':''}`);
-  _setStatus(2,`✅ ${files.length} arquivos carregados`,'upd-ok');checkProc();
-}
-
-// ─────────────────────────────────────────────────────────────
-// ITEM 3 — ESTACIONAMENTO
-// ─────────────────────────────────────────────────────────────
-async function linkEstac(){
-  if(!FSA_OK){document.getElementById('fi-estac-fb').click();return;}
-  try{
-    const dh=await window.showDirectoryPicker({mode:'read'});
-    await idbSave('h3',dh);
-    localStorage.setItem('p3',dh.name);
-    await _loadEstac(dh);
-  }catch(e){if(e.name!=='AbortError')_setStatus(3,'Erro ao vincular','upd-err');}
-}
-async function _loadEstac(dh){
-  _setStatus(3,'Lendo pasta...','upd-inf');
-  try{
-    const ok=await _ensurePermission(dh);
-    if(!ok){_setStatus(3,'Permissão negada','upd-err');return;}
-    const files=await _dirFiles(dh,'');
-    const xlsx=files.filter(f=>f.name.match(/\.(xlsx|xls)$/i));
-    const rep=xlsx.filter(f=>f.name.toLowerCase().includes('reportado'));
-    const prevFp=localStorage.getItem('fp3')||'';
-    const newFp=_fp(xlsx);
-    const changed=prevFp&&newFp!==prevFp;
-    App.files.estacionamento=xlsx;
-    _setPath(3,dh.name);
-    _setOk(3,`${xlsx.length} arq · ${rep.length} Reportado`);
-    _setStatus(3,prevFp?(changed?`✅ Atualizado (${rep.length} Reportado)`:'ℹ️ Sem alterações'):`✅ ${rep.length} Reportado carregados`,'upd-ok');
-    localStorage.setItem('fp3',newFp);
-    localStorage.setItem('p3',dh.name);
-  }catch(e){_setStatus(3,'Erro ao ler pasta','upd-err');console.error(e);}
-}
-function onEstacFilesFb(inp){
-  const files=Array.from(inp.files).filter(f=>f.name.match(/\.(xlsx|xls)$/i));
-  const rep=files.filter(f=>f.name.toLowerCase().includes('reportado'));
-  App.files.estacionamento=files;
-  localStorage.setItem('fp3',_fp(files));
-  localStorage.setItem('p3','pasta selecionada');
-  _setPath(3,'pasta selecionada');_setOk(3,`${files.length} arq · ${rep.length} Reportado`);
-  _setStatus(3,`✅ ${rep.length} Reportado carregados`,'upd-ok');
-}
-
-// ─────────────────────────────────────────────────────────────
-// ATUALIZAR individual
-// ─────────────────────────────────────────────────────────────
-async function refreshItem(n){
-  const btn=document.getElementById(`btn-ref${n}`);
-  const orig=btn.textContent;
-  btn.disabled=true; btn.textContent='⏳';
-  _setStatus(n,'Verificando...','upd-inf');
-  try{
-    const h=await idbLoad(`h${n}`);
-    if(!h){_setStatus(n,'Vínculo não encontrado — use 🔗 Vincular','upd-wrn');return;}
-    if(n===1) await _loadContas(h);
-    else if(n===2) await _loadBal(h);
-    else if(n===3) await _loadEstac(h);
-  }catch(e){_setStatus(n,'Erro ao atualizar','upd-err');console.error(e);}
-  finally{btn.disabled=false;btn.textContent=orig;}
-}
-
-// ─────────────────────────────────────────────────────────────
-// ESTADO DO BOTÃO PROCESSAR
-// ─────────────────────────────────────────────────────────────
-function checkProc(){
-  const ok=App.files.contas&&App.files.balancetes.length>0;
-  document.getElementById('btn-proc').disabled=!ok;
-  document.getElementById('proc-hint').textContent=ok?'Pronto para processar!':'Vincule os itens 1 e 2 para processar';
-}
-
-// ─────────────────────────────────────────────────────────────
-// INICIALIZAÇÃO — restaura vínculos salvos ao carregar a página
-// ─────────────────────────────────────────────────────────────
-async function initUploadScreen(){
-  ldgHide(); // FIX: loader começa OFF; só ativa via runProcess()
-  // file:// não suporta IDB/FileSystemHandle cross-origin — usa só localStorage
-  if(location.protocol==='file:'){
-    ['p1','p2','p3'].forEach((k,i)=>{
-      const n=i+1,v=localStorage.getItem(k);
-      if(v){_setPath(n,v);const h=document.getElementById(`s${n}-hint`);if(h)h.style.display='none';}
-    });
-    return;
-  }
-  // Tenta restaurar estado processado anteriormente
-  try{
-    const appState=await idbLoad('appState');
-    if(appState&&appState.unified&&appState.unified.length>0){
-      App.unified=appState.unified;
-      App.validations=appState.validations||[];
-      App.raw=appState.raw||App.raw;
-      App.filters=appState.filters||App.filters;
-      computeP27All();
-      populateFilters();
-      document.getElementById('upload-screen').style.display='none';
-      document.getElementById('main-app').style.display='block';
-      document.getElementById('app-footer').style.display='flex';
-      renderTab('resumo');
-      return;
-    }
-  }catch(e){console.warn('[idb] appState restore failed:',e);}
-
-  if(!FSA_OK){
-    document.getElementById('fsa-warn').style.display='';
-    // Mostra nomes salvos mas sem handles funcionais
-    ['p1','p2','p3'].forEach((k,i)=>{
-      const n=i+1,v=localStorage.getItem(k);
-      if(v){_setPath(n,v);document.getElementById(`s${n}-hint`).style.display='none';}
-    });
-    return;
-  }
-  // Para cada handle salvo, tenta restaurar silenciosamente
-  const handles=await Promise.all([idbLoad('h1'),idbLoad('h2'),idbLoad('h3')]);
-  for(let i=0;i<3;i++){
-    const n=i+1, h=handles[i];
-    if(!h) continue;
-    // Restaura display mesmo antes de verificar permissão
-    const savedPath=localStorage.getItem(`p${n}`);
-    if(savedPath){_setPath(n,savedPath);document.getElementById(`s${n}-hint`).style.display='none';}
-    // Verifica permissão sem pedir ao usuário
-    try{
-      const perm=await h.queryPermission({mode:'read'});
-      if(perm==='granted'){
-        // Permissão já concedida → auto-carrega
-        if(n===1) await _loadContas(h);
-        else if(n===2) await _loadBal(h);
-        else if(n===3) await _loadEstac(h);
-      }else{
-        // Permissão precisa ser reconfirmada — habilita botão de atualizar
-        const ref=document.getElementById(`btn-ref${n}`);
-        if(ref) ref.disabled=false;
-        _setStatus(n,'Clique em 🔄 Atualizar para reconectar','upd-wrn');
-      }
-    }catch(e){console.warn(`handle h${n} stale`,e);}
-  }
-}
-function ldgShow(txt,sub=''){
-  document.getElementById('ldg-txt').textContent=txt;
-  document.getElementById('ldg-sub').textContent=sub;
-  document.getElementById('ldg').classList.add('on');
-}
-function ldgHide(){document.getElementById('ldg').classList.remove('on');}
-
-async function runProcess(){
-  ldgShow('Lendo arquivo de mapeamento CONTAS DF...');
-  try{
-    // 1. Parse CONTAS DF
-    const cd=await Ingestion.parseContasDF(App.files.contas);
-    App.raw.participacoes=cd.participacoes;
-    App.raw.dpInc=cd.dpInc;
-    App.raw.dpShop=cd.dpShop;
-    App.raw.dpEstac=cd.dpEstac;
-    App.raw.pncPorAno=cd.pncPorAno||{};
-    App.raw.eliminacoes=cd.eliminacoes||[];
-    ldgShow(`Lendo ${App.files.balancetes.length} balancetes...`,'Pode levar alguns segundos');
-
-    // 2. Parse balancetes
-    App.raw.balancetes=await Ingestion.parseBalancetes(App.files.balancetes);
-    ldgShow('Aplicando classificações de empresa e regras contábeis...');
-
-    // 3. Parse estacionamento (opcional)
-    const estacFiltrados=App.files.estacionamento.filter(f=>/reportado/i.test(f.name)&&/\.(xlsx|xls)$/i.test(f.name)); // FIX: pré-filtra Reportado .xlsx/.xls antes de passar à função
-    if(estacFiltrados.length>0){
-      ldgShow(`Lendo estacionamento (0/${estacFiltrados.length})...`,'Apenas arquivos "Reportado"');
-      App.raw.estacionamento=await Ingestion.parseEstacionamento(estacFiltrados);
-    } else {
-      ldgShow('Consolidando dados...',''); // FIX: sem estacionamento — loader avança sem travar
-    }
-
-    // 4. Classificar empresas
-    const clsf=Transform.applyClassification(App.raw.balancetes,App.raw.participacoes);
-
-    // 5. De-para contábil (balancetes)
-    const dpBal=Transform.applyDePara(clsf,App.raw.dpInc,App.raw.dpShop,App.raw.dpEstac);
-
-    // 6. De-para contábil (estacionamento)
-    const dpEstac=Transform.applyDePara(App.raw.estacionamento,App.raw.dpInc,App.raw.dpShop,App.raw.dpEstac);
-
-    // 6.5 Marca registros da aba Eliminações com flagElim:true
-    const withElim=Transform.applyEliminacoesDF([...dpBal,...dpEstac],App.raw.eliminacoes);
-
-    // 7. Regras contábeis: 1x/2x=BP; 3x/4x=DRE×(−1); 5x=CONF
-    const withRules=Transform.applyRules(withElim);
-
-    // 8. Consolidar e excluir Equivalência Patrimonial
-    App.unified=Transform.consolidate(withRules);
-
-    ldgShow('Executando validações automáticas...');
-
-    // 9. Validações
-    App.validations=Transform.runValidations(App.unified);
-
-    // 9.5 Pré-computa P27 para todos os anos (disponível imediatamente em Conferência P27)
-    computeP27All();
-
-    // 10. Popular filtros
-    populateFilters();
-
-    ldgShow('Renderizando interface...');
-
-    // 11. Exibir app
-    document.getElementById('upload-screen').style.display='none';
-    document.getElementById('main-app').style.display='block';
-    document.getElementById('app-footer').style.display='flex';
-    document.getElementById('app-footer').style.display='flex';
-    document.getElementById('app-footer').style.display='flex';
-    renderTab('resumo');
-
-    ldgHide();
-
-    // Persiste após a UI estar visível — evita bloquear a renderização
-    setTimeout(()=>idbSave('appState',{unified:App.unified,validations:App.validations,raw:App.raw,filters:App.filters}).catch(e=>console.warn('[idb] appState save failed:',e)),0);
-
-    // ── Diagnóstico de classificação (sempre visível no console) ──────────────
-    const _cd={};
-    for(const r of App.unified) _cd[r.classe]=(_cd[r.classe]||0)+1;
-    const _n1s=[...new Set(App.unified.slice(0,300).map(r=>r.n1))].sort().join(', ');
-    const _sample=App.unified.slice(0,3).map(r=>({conta:r.conta,n1:r.n1,classe:r.classe,saldo:r.saldo,saldoFinal:r.saldoFinal}));
-    console.log(`✅ Processamento concluído. ${App.unified.length} linhas | ${App.raw.participacoes.length} empresas | Validações: ${App.validations.length}`);
-    console.log('📊 Distribuição por classe:', _cd);
-    console.log('📊 Valores de N1 encontrados:', _n1s||'(nenhum)');
-    console.table(_sample);
-
-  }catch(err){
-    ldgHide();
-    console.error('Erro no processamento:',err);
-    alert(`Erro ao processar arquivos:\n${err.message}\n\nVerifique o console (F12) para mais detalhes.`);
-  }
-}
-
-function populateFilters(){
-  const anos=[...new Set(App.unified.map(r=>r.ano))].sort().reverse();
-  const tipos=[...new Set(App.unified.map(r=>r.tipo).filter(t=>t))].sort();
-
-  const anoEl=document.getElementById('f-ano');
-  anoEl.innerHTML=anos.map(a=>`<option value="${a}">${a}</option>`).join('');
-  App.filters.ano=anos[0]||new Date().getFullYear();
-
-  const tipoEl=document.getElementById('f-tipo');
-  tipoEl.innerHTML=`<option value="Todos">Todos</option>`+tipos.map(t=>`<option value="${t}">${t}</option>`).join('');
-
-  // Padrão: mês mais recente disponível no ano mais recente
-  const mesesAno=[...new Set(App.unified.filter(r=>r.ano===App.filters.ano).map(r=>r.mes))].sort((a,b)=>b-a);
-  if(mesesAno.length>0){
-    document.getElementById('f-mes').value=mesesAno[0];
-    App.filters.mes=mesesAno[0];
-  }
-
-  // Inicializa dreState com o ano mais recente
-  App.dreState.anos=anos.length?[anos[0]]:[];
-  App.dreState.analytic=false;
-  App.dreState.expanded={};
-}
-
-function resetUpload(){
-  if(!confirm('Deseja reconfigurar fontes? Os dados atuais serão perdidos.')) return;
-  idbDel('appState').catch(e=>console.warn('[idb] appState delete failed:',e));
-  App.raw={participacoes:[],dpInc:[],dpShop:[],dpEstac:[],balancetes:[],estacionamento:[],pncPorAno:{},eliminacoes:[]};
-  App.unified=[];App.validations=[];
-  App.files={contas:null,balancetes:[],estacionamento:[]};
-  ['s1','s2','s3'].forEach(id=>document.getElementById(id).classList.remove('ok'));
-  ['s1-ok','s2-ok','s3-ok'].forEach(id=>document.getElementById(id).textContent='');
-  ['upd1-status','upd2-status','upd3-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='';});
-  document.getElementById('btn-proc').disabled=true;
-  document.getElementById('upload-screen').style.display='block';
-  document.getElementById('main-app').style.display='none';
-  document.getElementById('app-footer').style.display='none';
-  Object.keys(App.charts).forEach(k=>{App.charts[k].destroy();delete App.charts[k];});
-}
-
-// ── Bootstrap: restaura vínculos ao carregar a página ────────
-document.addEventListener('DOMContentLoaded',()=>{ initUploadScreen(); });
-</script>
-
-<!-- ── Footer ────────────────────────────────────────────────── -->
-<footer class="app-ftr" id="app-footer" style="display: flex;">
-  <div>
-    <div class="ftr-brand">Grupo Sá Cavalcante</div>
-    <div class="ftr-meta">Holding · Shoppings · Incorporadora</div>
-  </div>
-  <div class="ftr-right">
-    Uso interno · Confidencial<br>
-    <span id="ftr-data"></span>
-  </div>
-</footer>
-
-</body></html>
+  i</script></body></html>
