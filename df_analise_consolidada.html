@@ -123,6 +123,42 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 </script>
 <!-- Chart.js: gráficos -->
 <script type="text/javascript">
+(function(){
+  // Patch ownerDocument.defaultView para file:// — evita o warning nativo do Chrome
+  // ao acessar cross-origin security origin check em contexto file://
+  const _getComputedStyle = window.getComputedStyle.bind(window);
+
+  // Sobrescreve getComputedStyle para garantir que usa sempre window local
+  window.getComputedStyle = function(el, pseudo) {
+    try {
+      return _getComputedStyle(el, pseudo);
+    } catch(e) {
+      return { getPropertyValue: () => '', setProperty: () => {} };
+    }
+  };
+
+  // Patch devicePixelRatio listener — remove o forEach que dispara o warning de DPI
+  // O Chart.js usa um Map global (bs) com listeners de devicePixelRatio
+  // Interceptamos matchMedia para neutralizar o listener antes do Chart.js criá-lo
+  const _matchMedia = window.matchMedia.bind(window);
+  window.matchMedia = function(query) {
+    try {
+      return _matchMedia(query);
+    } catch(e) {
+      // Retorna objeto inerte quando file:// bloqueia matchMedia
+      return {
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+        addListener: () => {},
+        removeListener: () => {}
+      };
+    }
+  };
+})();
 /**
  * Skipped minification because the original files appears to be already minified.
  * Original file: /npm/chart.js@4.4.2/dist/chart.umd.js
@@ -536,7 +572,7 @@ input[type=file]{display:none}
 <body>
 
 <!-- ── Loading overlay ─────────────────────────────────────── -->
-<div class="loading-ov on" id="ldg">  <!-- FIX: removido "on" inicial; loader controlado apenas por JS -->
+<div class="loading-ov" id="ldg">
   <div class="spinner"></div>
   <div class="load-txt" id="ldg-txt"></div>
   <div class="load-sub" id="ldg-sub"></div>
@@ -7748,8 +7784,8 @@ input[type=file]{display:none}
 function ldgShow(msg,sub){
   const el=document.getElementById('ldg');
   if(!el) return;
-  const t=el.querySelector('.ldg-title'); if(t) t.textContent=msg||'Processando...';
-  const s=el.querySelector('.ldg-sub');   if(s) s.textContent=sub||'';
+  const t=document.getElementById('ldg-txt'); if(t) t.textContent=msg||'Processando...';
+  const s=document.getElementById('ldg-sub'); if(s) s.textContent=sub||'';
   el.classList.add('on');
 }
 function ldgHide(){
@@ -10598,4 +10634,30 @@ async function runProcess(){
     if(btn) btn.disabled=false;
   }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+  // 1. Esconder loader imediatamente (não há processamento no boot)
+  ldgHide();
+
+  // 2. Garantir estado inicial correto das telas
+  const us = document.getElementById('upload-screen');
+  const ma = document.getElementById('main-app');
+  if (us) us.style.display = '';
+  if (ma) ma.style.display = 'none';
+
+  // 3. Definir ano padrão nos filtros (ano corrente)
+  const anoAtual = new Date().getFullYear();
+  App.filters.ano = anoAtual;
+  const fAno = document.getElementById('f-ano');
+  if (fAno) {
+    if (!fAno.options.length) {
+      for (let a = anoAtual; a >= anoAtual - 5; a--) {
+        const opt = document.createElement('option');
+        opt.value = a; opt.textContent = a;
+        fAno.appendChild(opt);
+      }
+    }
+    fAno.value = anoAtual;
+  }
+});
 </script></body></html>
