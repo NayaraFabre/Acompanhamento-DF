@@ -94,7 +94,7 @@ h1, h2, h3, h4, h5, h6, label {
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DF — Grupo Sá Cavalcante</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%231F3A35'/%3E%3Ctext y='72' x='50' text-anchor='middle' font-size='56' font-family='Arial' font-weight='bold' fill='%23F39019'%3ESC%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAANdSURBVHhe7Zuxb9QwFMYzMjLCQCwhhFohaOGc6pKTehUDAwwwdIAFVWJhQKIDww0MSPAHIBZGxH/AxoiYGLsgMTIyMjAwHvqS+jBf7Dhx7pASO9JPvXOeHb/vvWfnKjlJHJfIJ1tiNjkQRXYk8uzFYMB8q3nvsk+tLjGVx2mRfRNFthw6aSG/l6LM52fYz9qFiKe5/MKDjIEyoLO9Kfu8upA2aS5/c8fRkWcL9l1FfvzOK2aTg38EGGva20gL+UPMd85W0Z/KYzYIgTSX76roY5U0GIwdlDwWvl2+ERKJyOV9bgyJYOtfkZy+NtZuhEIUIAoQBYgCRAG4MSSiAFGANQlw+87O8smDK8vFw+0VaGO7tmzvy7K/Pt7h3WtLefNGzbYPvQTAJDGxX6/PN/Lm8eXSlvub2L91ffn+6aXaGDofnl0s7bivD94CwKHPz0VtcjZg6xLh6PBqrV8TsOcxuuItAKLKE3KByPE4iq7OK1AWPFYXvARAJHkiAKKoesXnry8v1GxMqYtaZzuA/q8ebZXj4a9pPLTxeF3wEoAnbEtvU5nAGbZDZrBjtvTGQtvWtg0bFQAg4k07A1Z1dghO8jg6evnh2f9dAMCTVunKDrrgiLZJaYiG2reJ3gVvAVzbHyIDQUw1rwMbvR++s80m8RYAtN0JEFVbmnL9m9aITdJLAADHTKuzCbzgcP/BC6BQix07xHCKs/1gBWCwGNr2bt2OywjfeSwTyLx1/C7wEkDf1tpEjKOs7xQ+uwB2AN2+zRxseAnALzeurY9Xet0epaPfA673AH4+l1UXvATgtEUUbNsdvzSxAIAzBJh2Dez7/Gxge3YbvAQwRQ3AEb00OFIKHs8kEtB/C5gcV8/k8brgJQCwTciFLb1dL1Y2+i6E3gIgHU2p24RrhecF0UWf1Fd4C6BA5ExbnU7TmyDT5j9CELJv5BW9BVBg4nBSXwOwXflGCRmG/jzeOn4A6axNgKESBYgCRAGiAFEAbgyJKEAUIAoQBYgCcGNIQIAFN4ZEeU6IG0MiwSkqbgyJBGfp0jz7yTdCQR2Yess3QiDN5Ul1aCrLzpWnqAxGY+X0iODfY7Ui37vHRqPGdHgylFJIC/mRfV9d1fHZcS6KZdqbIs9XtSZkn3iAIWM7OP0Hwq6RYtz+OoYAAAAASUVORK5CYII=">
 <!-- SheetJS: leitura de Excel no browser -->
 <script type="text/javascript">
 /*! xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
@@ -137,15 +137,27 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
   };
 
-  // Patch devicePixelRatio listener — remove o forEach que dispara o warning de DPI
-  // O Chart.js usa um Map global (bs) com listeners de devicePixelRatio
-  // Interceptamos matchMedia para neutralizar o listener antes do Chart.js criá-lo
-  const _matchMedia = window.matchMedia.bind(window);
+  // Patch matchMedia — em file:// retorna objeto inerte sem chamar o native.
+  // O native matchMedia pode disparar security checks internos do Chrome em file://.
+  // Chart.js usa matchMedia só para detectar mudanças de devicePixelRatio;
+  // em file:// esse listener é inerte (DPR não muda enquanto o arquivo está aberto).
+  const _matchMedia = window.matchMedia ? window.matchMedia.bind(window) : null;
   window.matchMedia = function(query) {
+    if (location.protocol === 'file:') {
+      return {
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+        addListener: () => {},
+        removeListener: () => {}
+      };
+    }
     try {
-      return _matchMedia(query);
+      return _matchMedia ? _matchMedia(query) : null;
     } catch(e) {
-      // Retorna objeto inerte quando file:// bloqueia matchMedia
       return {
         matches: false,
         media: query,
@@ -568,7 +580,7 @@ input[type=file]{display:none}
   .tbl-wrap{max-height:none;overflow:visible}
 }
 </style>
-<meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"><meta id="dcngeagmmhegagicpcmpinaoklddcgon"></head>
+</head>
 <body>
 
 <!-- ── Loading overlay ─────────────────────────────────────── -->
