@@ -8309,62 +8309,49 @@ const Transform = {
   // Equivalência Patrimonial é MANTIDA — a nova DRE gerencial a exibe como linha própria.
   // Linhas de estacionamento com De/Para DF marcado como "(Sintetica)" são excluídas —
   // representam agrupadores sintéticos do plano de contas, não lançamentos reais.
-  // ── Regras de Eliminação Intercompany (Especificação Técnica — 10 passos) ──────────
-  // ── Marca flagElim:true nas linhas listadas na aba Eliminações ──────────────
-  // Executado em runProcess() ANTES de applyRules, sobre o array bruto pós-dePara.
-  // NÃO altera saldos — apenas adiciona a flag para uso posterior em renderBP/renderDRE.
-  // Marca flagElim:true em cada linha do balancete que satisfaz ao menos uma regra da aba Eliminações.
-  // Lógica por regra:
-  //   Identificador (OR): conta === rule.conta  OU  classDF === rule.classDF
-  //                       OU  classDF/deParaDF === rule.deParaDF
-  //   Nota (AND):  rule.deParaNotas vazio → sem restrição (todo o grupo)
-  //                rule.deParaNotas preenchido → r.deParaNotas deve casar exatamente
+  // Marca flagElim:true apenas nas linhas que casam com uma regra explícita da aba "Eliminações".
+  // Lógica AND por regra: todos os campos não-vazios da regra devem casar com os da linha.
+  // Campo vazio na regra = wildcard (não restringe o matching).
+  // deParaNotas vazio = aplica para o grupo inteiro.
   applyEliminacoesDF(rows, eliminacoes){
-    const trim=v=>(v||'').toString().trim();
+    const norm=v=>(v||'').toString().trim().toLowerCase();
 
     if(!eliminacoes||eliminacoes.length===0){
-      console.warn('[applyEliminacoesDF] Nenhuma regra — aba "Eliminações" vazia ou não encontrada. Nenhuma eliminação aplicada.');
+      console.warn('[applyEliminacoesDF] eliminacoes vazias — nenhuma eliminação aplicada.');
       return rows;
     }
 
-    // Normaliza e filtra regras inválidas (todos os campos de identif. vazios)
-    const rules=eliminacoes.map(e=>({
-      conta:      trim(e.conta),
-      classDF:    trim(e.classDF),
-      deParaDF:   trim(e.deParaDF),
-      deParaNotas:trim(e.deParaNotas),
+    const regras=eliminacoes.map(e=>({
+      conta:      norm(e.conta),
+      classDF:    norm(e.classDF),
+      deParaDF:   norm(e.deParaDF),
+      deParaNotas:norm(e.deParaNotas),
     })).filter(e=>e.conta||e.classDF||e.deParaDF);
 
-    if(!rules.length){
-      console.warn('[applyEliminacoesDF] Todas as linhas da aba Eliminações estão sem identificador. Nenhuma eliminação aplicada.');
+    if(!regras.length){
+      console.warn('[applyEliminacoesDF] Nenhuma regra com identificador válido — nenhuma eliminação aplicada.');
       return rows;
     }
 
-    console.log('[applyEliminacoesDF] Regras carregadas:',rules.length,
-      '| Amostra (3):',rules.slice(0,3));
+    console.log('[applyEliminacoesDF] Regras carregadas:',regras.length,'| Amostra (3):',regras.slice(0,3));
 
     let flagged=0;
     const result=rows.map(r=>{
-      const rConta    =trim(r.conta);
-      const rClassDF  =trim(r.classDF);
-      const rDeParaDF =trim(r.deParaDF);
-      const rNotas    =trim(r.deParaNotas);
+      const rConta=norm(r.conta);
+      const rClass=norm(r.classDF);
+      const rDP   =norm(r.deParaDF);
+      const rNota =norm(r.deParaNotas);
 
-      for(const rule of rules){
-        // 1. Verifica identificador (basta um campo bater — OR)
-        let idMatch=false;
-        if(rule.conta    && rConta===rule.conta)                      idMatch=true;
-        if(rule.classDF  && rClassDF===rule.classDF)                  idMatch=true;
-        if(rule.deParaDF && (rClassDF===rule.deParaDF||rDeParaDF===rule.deParaDF)) idMatch=true;
-        if(!idMatch) continue;
+      const match=regras.some(regra=>{
+        // AND: cada campo não-vazio na regra deve bater exatamente com o campo da linha
+        const matchConta   =!regra.conta    ||regra.conta   ===rConta;
+        const matchClass   =!regra.classDF  ||regra.classDF ===rClass;
+        const matchDP      =!regra.deParaDF ||regra.deParaDF===rDP;
+        const matchNota    =!regra.deParaNotas||regra.deParaNotas===rNota;
+        return matchConta&&matchClass&&matchDP&&matchNota;
+      });
 
-        // 2. Verifica restrição de nota (AND)
-        if(rule.deParaNotas && rNotas!==rule.deParaNotas) continue;
-
-        // Passou nos dois critérios → marca e para de testar outras regras
-        flagged++;
-        return{...r,flagElim:true};
-      }
+      if(match){flagged++;return{...r,flagElim:true};}
       return r;
     });
 
@@ -8372,7 +8359,7 @@ const Transform = {
     if(!flagged){
       console.warn('[applyEliminacoesDF] ZERO linhas marcadas.',
         '| Amostra rows (conta/classDF):',rows.slice(0,5).map(r=>({conta:r.conta,classDF:r.classDF})),
-        '| Amostra rules:',rules.slice(0,5));
+        '| Amostra regras:',regras.slice(0,5));
     }
     return result;
   },
@@ -8891,7 +8878,7 @@ function calcEliminacoes(rows){
   const elimA5 =sum(elimA5Rows);
   const elimA11=sum(elimA11Rows);   // usa saldo das próprias linhas A11 (fix: era elimA5)
   const elimP6 =sum(elimP6Rows);
-  const elimP12=sum([...elimA5Rows,...elimA11Rows]); // P12 deduz A11 + A5
+  const elimP12=elimA11+elimA5; // P12 = eliminação de A11 + eliminação de A5
 
   return{
     elimP15, elimP8, elimPL, elimA13Base, elimA13Direct, elimA11, elimP12, elimA5, elimP6,
