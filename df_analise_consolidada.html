@@ -7982,12 +7982,14 @@ const Ingestion = {
       for(let i=1;i<rows.length;i++){
         const r=rows[i];
         if(!r||r.every(c=>c===''||c===null||c===undefined)) continue;
-        const conta=(r[ci>=0?ci:0]||'').toString().trim();
-        if(!conta) continue;
+        const conta     =(r[ci>=0?ci:0]||'').toString().trim();
+        const classDFv  = clI>=0 ? (r[clI]||'').toString().trim() : '';
+        const deParaDFv =(r[di>=0?di:defDi]||'').toString().trim();
+        if(!conta&&!classDFv&&!deParaDFv) continue;
         dp.push({
           conta,
-          classDF:   clI>=0 ? (r[clI]||'').toString().trim() : '',
-          deParaDF:  (r[di>=0?di:defDi]||'').toString().trim(),
+          classDF:    classDFv,
+          deParaDF:   deParaDFv,
           deParaNotas:(r[ni>=0?ni:defNi]||'').toString().trim()
         });
       }
@@ -8247,67 +8249,6 @@ const Transform = {
   // Linhas de estacionamento com De/Para DF marcado como "(Sintetica)" são excluídas —
   // representam agrupadores sintéticos do plano de contas, não lançamentos reais.
   // ── Regras de Eliminação Intercompany (Especificação Técnica — 10 passos) ──────────
-  // Elimina saldos espelhados entre classDF de partes relacionadas
-  // dentro do consolidado por período (ano × mes) × codColigada.
-  // Pares cobertos: E1(A5↔P6, A11↔P12), E2(A11↔P14), E3(A13↔P8),
-  //                 E6(A5↔P12, A11↔P6)
-  // Flag elimIntercompany:true + elimAjuste marcados em cada linha afetada.
-  applyEliminacoes(rows){
-    const PARES_ELIM=[
-      ['A5',  'P6' ],  // E1a — Partes relacionadas CP  ↔ Obrigações CP
-      ['A11', 'P12'],  // E1b — Partes relacionadas LP  ↔ Obrigações LP
-      ['A11', 'P14'],  // E2  — Partes relacionadas LP  ↔ Debêntures IR
-      ['A13', 'P8' ],  // E3  — Investimentos           ↔ Perdas investim.
-      ['A5',  'P12'],  // E6a — Dividendos receber CP   ↔ Obrigações LP
-      ['A11', 'P6' ],  // E6b — Dividendos receber LP   ↔ Obrigações CP
-    ];
-
-    // Agrega saldo por [ano|mes|codColigada|classDF]
-    const keySum={};
-    for(const r of rows){
-      const k=`${r.ano}|${r.mes}|${r.codColigada}|${r.classDF}`;
-      keySum[k]=(keySum[k]||0)+(r.saldoFinal||0);
-    }
-
-    // Para cada par: calcula montante eliminável por período × coligada
-    const elimPorChave={};
-    for(const [clA,clP] of PARES_ELIM){
-      const periodos=new Set(
-        rows
-          .filter(r=>r.classDF===clA||r.classDF===clP)
-          .map(r=>`${r.ano}|${r.mes}|${r.codColigada}`)
-      );
-      for(const per of periodos){
-        const kA=`${per}|${clA}`;
-        const kP=`${per}|${clP}`;
-        const vA=keySum[kA]||0;
-        const vP=keySum[kP]||0;
-        // Ativo positivo, passivo negativo — par válido quando ambos têm saldo
-        if(Math.abs(vA)<1||Math.abs(vP)<1) continue;
-        const elimAmt=Math.min(Math.abs(vA),Math.abs(vP));
-        elimPorChave[kA]=(elimPorChave[kA]||0)+elimAmt;     // reduz ativo
-        elimPorChave[kP]=(elimPorChave[kP]||0)-elimAmt;     // reduz passivo (sobe → menos negativo)
-      }
-    }
-
-    // Distribui ajuste proporcionalmente nas linhas individuais
-    return rows.map(r=>{
-      const k=`${r.ano}|${r.mes}|${r.codColigada}|${r.classDF}`;
-      if(!(k in elimPorChave)) return r;
-      const totalElim =elimPorChave[k];
-      const totalSaldo=keySum[k];
-      if(Math.abs(totalSaldo)<0.01) return r;
-      const proporcao=(r.saldoFinal||0)/totalSaldo;
-      const ajuste   =totalElim*proporcao;
-      return{
-        ...r,
-        saldoFinal      :(r.saldoFinal||0)+ajuste,
-        elimIntercompany:true,
-        elimAjuste      :ajuste
-      };
-    });
-  },
-
   // ── Marca flagElim:true nas linhas listadas na aba Eliminações ──────────────
   // Executado em runProcess() ANTES de applyRules, sobre o array bruto pós-dePara.
   // NÃO altera saldos — apenas adiciona a flag para uso posterior em renderBP/renderDRE.
@@ -8319,14 +8260,16 @@ const Transform = {
       console.warn('[applyEliminacoesDF] eliminacoes vazias — aba "Eliminações" não encontrada ou sem dados.');
       return rows;
     }
-    const allValues=new Set(
-      eliminacoes.flatMap(e=>[e.conta,e.classDF,e.deParaDF]).filter(v=>v&&v.trim())
-    );
-    console.log('[applyEliminacoesDF] valores lidos:',
-      [...allValues].slice(0,20),'| total:',allValues.size);
+    // Separar: contas específicas (match por r.conta) vs grupos classDF (match por r.classDF)
+    const trim=v=>(v||'').toString().trim();
+    const contaSet  =new Set(eliminacoes.map(e=>trim(e.conta)).filter(v=>v));
+    const classDFSet=new Set(eliminacoes.flatMap(e=>[trim(e.classDF),trim(e.deParaDF)]).filter(v=>v));
+    console.log('[applyEliminacoesDF] contas:',contaSet.size,'| grupos classDF:',classDFSet.size,
+      '| amostra classDF:',[...classDFSet].slice(0,10));
     let flagged=0;
     const result=rows.map(r=>{
-      if(allValues.has(r.conta)||allValues.has(r.classDF)){
+      // Conta específica OU classDF inteiro (quando Class.DF preenchido sem conta → todo o grupo)
+      if(contaSet.has(trim(r.conta))||classDFSet.has(trim(r.classDF))){
         flagged++;
         return{...r,flagElim:true};
       }
@@ -8347,8 +8290,6 @@ const Transform = {
       const dp=(r.deParaDF||'').toLowerCase();
       return !dp.includes('sintetica')&&!dp.includes('sintética');
     });
-    // FIX E1-E6: aplicar eliminações intercompany
-    rows=this.applyEliminacoes(rows);
     return rows;
   },
 
@@ -8835,7 +8776,11 @@ function calcEliminacoes(rows){
   for(const cls of PL_ELIM_CODES)
     elimByClass[cls]=sum(elimPLRows.filter(r=>r.classDF===cls));
 
-  // REGRA 4 — A13 base: PL sem 44/45 + P8/P17 com nota "Manual (Regra de Consolidação DF)"
+  // REGRA 4a — A13 direto: quando A13 está explicitamente na aba Eliminações
+  const elimA13DirectRows=rows.filter(r=>r.flagElim&&r.classDF==='A13');
+  const elimA13Direct=sum(elimA13DirectRows);
+
+  // REGRA 4b — A13 base (fórmula indireta via PL): só usada quando A13 NÃO está na aba Eliminações
   const MANUAL_NOTA='Manual ( Regra de Consolidação DF)';
   const isManual=r=>(r.deParaNotas||'').trim()===MANUAL_NOTA;
   const elimA13Rows=[
@@ -8856,16 +8801,17 @@ function calcEliminacoes(rows){
   const elimP12=sum([...elimA5Rows,...elimA11Rows]); // P12 deduz A11 + A5
 
   return{
-    elimP15, elimP8, elimPL, elimA13Base, elimA11, elimP12, elimA5, elimP6,
+    elimP15, elimP8, elimPL, elimA13Base, elimA13Direct, elimA11, elimP12, elimA5, elimP6,
     elimByClass,
     rows:{
-      p2:  elimP2,
-      p8:  elimP8Rows,
-      pl:  elimPLRows,
-      a13: elimA13Rows,
-      a5:  elimA5Rows,
-      a11: elimA11Rows,
-      p6:  elimP6Rows,
+      p2:   elimP2,
+      p8:   elimP8Rows,
+      pl:   elimPLRows,
+      a13:  elimA13Rows,
+      a13d: elimA13DirectRows,
+      a5:   elimA5Rows,
+      a11:  elimA11Rows,
+      p6:   elimP6Rows,
     }
   };
 }
@@ -8947,7 +8893,12 @@ function renderBP(allRows){
     if(cls==='P12') return raw-(e.elimP12||0);
     if(cls==='A5')  return raw-(e.elimA5||0);
     if(cls==='A11') return raw-(e.elimA11||0);
-    if(cls==='A13') return raw-(e.elimA13Base||0)-(App.p27PA?.[a]||0);
+    if(cls==='A13'){
+      // A13 na aba Eliminações → elimina diretamente as linhas flagadas
+      if((e.elimA13Direct||0)>0) return raw-(e.elimA13Direct||0);
+      // A13 ausente da aba → fórmula indireta via PL + P27 (equivalência patrimonial)
+      return raw-(e.elimA13Base||0)-(App.p27PA?.[a]||0);
+    }
     if(e.elimByClass?.[cls]) return raw-(e.elimByClass[cls]||0);
     return raw;
   };
@@ -10259,12 +10210,13 @@ function renderEliminacoesConf(){
   }
 
   const grupos={
-    'P2 → P15':                                  _elim.rows.p2,
-    'P8 (eliminado total)':                       _elim.rows.p8,
-    'PL Eliminado (P24/P25/P26/P28/P30 ­— exceto 44/45)': _elim.rows.pl,
-    'A13 — Base (P24–P30 + Manual P8/P17)':       _elim.rows.a13,
-    'A5 (elimina A11 e P12)':                     _elim.rows.a5,
-    'A11 (deduz A5)':                             _elim.rows.a11,
+    'P2 → P15':                                           _elim.rows.p2,
+    'P8 (eliminado total)':                               _elim.rows.p8,
+    'PL Eliminado (P24/P25/P26/P28/P30 — exceto 44/45)': _elim.rows.pl,
+    'A13 — Direto (aba Eliminações)':                     _elim.rows.a13d,
+    'A13 — Base indireta (PL + Manual P8/P17)':           _elim.rows.a13,
+    'A5 (elimina A11 e P12)':                             _elim.rows.a5,
+    'A11 (deduz A5)':                                     _elim.rows.a11,
   };
 
   let html=`<div class="sec">
