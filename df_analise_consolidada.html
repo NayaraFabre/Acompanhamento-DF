@@ -10503,6 +10503,8 @@ function resetUpload(){
   const ma=document.getElementById('main-app');
   if(us) us.style.display='';
   if(ma) ma.style.display='none';
+  _handles.h1=null; _handles.h2=null; _handles.h3=null;
+  idbDel('handles').catch(()=>{});
 }
 
 // ── Upload / link UI ─────────────────────────────────────────────
@@ -10513,6 +10515,7 @@ async function linkContas(){
     try{
       const [fh]=await window.showOpenFilePicker({types:[{description:'Excel',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx','.xls']}}],multiple:false});
       _handles.h1=fh;
+      idbSave('handles',{h1:_handles.h1,h2:_handles.h2,h3:_handles.h3}).catch(e=>console.warn('[idb] handles save falhou:',e));
       const f=await fh.getFile();
       App.files.contas=[f];
       _setPath(1,f.name); _setOk(1,'✓ '+f.name); _setStatus(1,'✅ Pronto','upd-ok');
@@ -10525,6 +10528,7 @@ async function linkBal(){
     try{
       const dh=await window.showDirectoryPicker({mode:'read'});
       _handles.h2=dh;
+      idbSave('handles',{h1:_handles.h1,h2:_handles.h2,h3:_handles.h3}).catch(e=>console.warn('[idb] handles save falhou:',e));
       const files=await _dirFiles(dh,'');
       App.files.balancetes=files.filter(f=>/\.(xlsx|xls)$/i.test(f.name));
       _setPath(2,dh.name); _setOk(2,`✓ ${App.files.balancetes.length} arquivos`);
@@ -10538,6 +10542,7 @@ async function linkEstac(){
     try{
       const dh=await window.showDirectoryPicker({mode:'read'});
       _handles.h3=dh;
+      idbSave('handles',{h1:_handles.h1,h2:_handles.h2,h3:_handles.h3}).catch(e=>console.warn('[idb] handles save falhou:',e));
       const files=await _dirFiles(dh,'');
       App.files.estacionamento=files.filter(f=>/\.(xlsx|xls)$/i.test(f.name));
       _setPath(3,dh.name); _setOk(3,`✓ ${App.files.estacionamento.length} arq`);
@@ -10682,6 +10687,43 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     fAno.value = anoAtual;
+  }
+
+  // Restaurar handles FSA persistidos na sessão anterior
+  if (typeof FSA_OK !== 'undefined' && FSA_OK) {
+    idbLoad('handles').then(async saved => {
+      if (!saved) return;
+      if (saved.h1) {
+        const perm = await saved.h1.queryPermission({mode:'read'});
+        if (perm === 'granted' || (await saved.h1.requestPermission({mode:'read'})) === 'granted') {
+          _handles.h1 = saved.h1;
+          const f = await saved.h1.getFile();
+          App.files.contas = [f];
+          _setPath(1, f.name); _setOk(1, '✓ ' + f.name); _setStatus(1, '✅ Pronto', 'upd-ok');
+        }
+      }
+      if (saved.h2) {
+        const perm = await saved.h2.queryPermission({mode:'read'});
+        if (perm === 'granted' || (await saved.h2.requestPermission({mode:'read'})) === 'granted') {
+          _handles.h2 = saved.h2;
+          const files = await _dirFiles(saved.h2, '');
+          App.files.balancetes = files.filter(f => /\.(xlsx|xls)$/i.test(f.name));
+          _setPath(2, saved.h2.name); _setOk(2, `✓ ${App.files.balancetes.length} arquivos`);
+          _setStatus(2, `✅ ${App.files.balancetes.length} arquivos`, 'upd-ok');
+        }
+      }
+      if (saved.h3) {
+        const perm = await saved.h3.queryPermission({mode:'read'});
+        if (perm === 'granted' || (await saved.h3.requestPermission({mode:'read'})) === 'granted') {
+          _handles.h3 = saved.h3;
+          const files = await _dirFiles(saved.h3, '');
+          App.files.estacionamento = files.filter(f => /\.(xlsx|xls)$/i.test(f.name));
+          _setPath(3, saved.h3.name); _setOk(3, `✓ ${App.files.estacionamento.length} arq`);
+          _setStatus(3, '✅ Pronto', 'upd-ok');
+        }
+      }
+      checkReady();
+    }).catch(e => console.warn('[idb] restore handles falhou:', e));
   }
 });
 </script></body></html>
