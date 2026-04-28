@@ -8003,7 +8003,68 @@ const Ingestion = {
 
     // ── Aba Eliminações (De-para de consolidação NBC TG 36) ────────
     console.log('[parseContasDF] Abas disponíveis no CONTAS DF.xlsx:',wb.SheetNames);
-    res.eliminacoes=lerDP(['Eliminações','Eliminacoes','Eliminacao','Eliminações DF','Eliminacao DF','Elim DF','Elim','Eliminação','elimina','Intercompany','Inter-company']);
+    const lerEliminacoes=()=>{
+      // Nomes candidatos (aceitamos variações de acento, espaço, maiúsculas)
+      const NOMES_ELIM=['Eliminações','Eliminacoes','Eliminacao','Eliminações DF',
+        'Eliminacao DF','Elim DF','Elim','Eliminação','elimina','Intercompany','Inter-company'];
+      const ws=findAba(NOMES_ELIM);
+      if(!ws){
+        console.warn('[lerEliminacoes] Aba "Eliminações" não encontrada. Nomes testados:',NOMES_ELIM);
+        return [];
+      }
+      const abaEncontrada=wb.SheetNames.find(k=>NOMES_ELIM.some(n=>k.toLowerCase().includes(n.toLowerCase())));
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(!rows.length||!rows[0]){
+        console.warn('[lerEliminacoes] Aba encontrada mas sem dados.');
+        return [];
+      }
+      // Normalizar cabeçalho: remove acentos, pontos, barras → uppercase
+      const norm=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'')
+                            .replace(/[./\\]/g,' ').trim().toUpperCase();
+      const h=rows[0].map(x=>norm(x));
+      console.log('[lerEliminacoes] Aba:',abaEncontrada,'| Cabeçalho normalizado:',h);
+
+      // Função de detecção de coluna: first exact match, then substring match
+      const findCol=(candidates)=>{
+        const nc=candidates.map(c=>norm(c));
+        let idx=h.findIndex(hv=>nc.includes(hv));             // exact
+        if(idx<0) idx=h.findIndex(hv=>nc.some(c=>hv.includes(c)||c.includes(hv))); // substring
+        return idx;
+      };
+
+      const ci =findCol(['CONTA','CODCONTA','COD CONTA','COD']);
+      const clI=findCol(['CLASS DF','CLASSIF DF','CLASSIF. DF','CLASSIFICACAO DF','CLASS.DF','CLASSIFICACAO']);
+      const di =findCol(['DE PARA DF','DEPARA DF','DE-PARA DF','DE/PARA DF','DEPARA']);
+      const ni =findCol(['DE PARA NOTAS','DEPARA NOTAS','DE-PARA NOTAS','DE/PARA NOTAS',
+                         'NOTAS EXPLICATIVAS','NOTA EXPLICATIVA','NOTAS','NOTA']);
+
+      // Fallbacks posicionais quando cabeçalho não detectado
+      const ciF  = ci>=0  ? ci  : 0;
+      const clIF = clI>=0 ? clI : 1;
+      const diF  = di>=0  ? di  : (clI>=0?2:1);
+      const niF  = ni>=0  ? ni  : (clI>=0?3:2);
+
+      console.log('[lerEliminacoes] Colunas detectadas — CONTA:',ci,'CLASS.DF:',clI,
+        'DE/PARA DF:',di,'DE/PARA NOTAS:',ni,
+        '| fallbacks usados:',[ci<0&&'CONTA',clI<0&&'CLASS.DF',di<0&&'DE/PARA DF',ni<0&&'NOTAS'].filter(Boolean));
+
+      const dp=[];
+      for(let i=1;i<rows.length;i++){
+        const r=rows[i];
+        if(!r||r.every(c=>c===''||c===null||c===undefined)) continue;
+        const conta     =(r[ciF] ||'').toString().trim();
+        const classDFv  =(r[clIF]||'').toString().trim();
+        const deParaDFv =(r[diF] ||'').toString().trim();
+        const deParaN   =(r[niF] ||'').toString().trim();
+        if(!conta&&!classDFv&&!deParaDFv) continue;
+        dp.push({conta, classDF:classDFv, deParaDF:deParaDFv, deParaNotas:deParaN});
+      }
+
+      console.log('[lerEliminacoes] Total de regras válidas:',dp.length,
+        '| Amostra (5 primeiras):',dp.slice(0,5));
+      return dp;
+    };
+    res.eliminacoes=lerEliminacoes();
     console.log('[parseContasDF] eliminacoes lidas:',res.eliminacoes.length,'| amostra:',res.eliminacoes.slice(0,5));
 
     // Aba "Participação de não controlador": CODCOLIGADA × Ano → fração
@@ -8252,34 +8313,66 @@ const Transform = {
   // ── Marca flagElim:true nas linhas listadas na aba Eliminações ──────────────
   // Executado em runProcess() ANTES de applyRules, sobre o array bruto pós-dePara.
   // NÃO altera saldos — apenas adiciona a flag para uso posterior em renderBP/renderDRE.
-  // Suporta dois formatos da aba Eliminações:
-  //   A) Lista de CONTA codes (ex: "1.1.04.001") → compara com r.conta
-  //   B) Lista de CLASS.DF codes (ex: "P2","P8","A5") → compara com r.classDF
+  // Marca flagElim:true em cada linha do balancete que satisfaz ao menos uma regra da aba Eliminações.
+  // Lógica por regra:
+  //   Identificador (OR): conta === rule.conta  OU  classDF === rule.classDF
+  //                       OU  classDF/deParaDF === rule.deParaDF
+  //   Nota (AND):  rule.deParaNotas vazio → sem restrição (todo o grupo)
+  //                rule.deParaNotas preenchido → r.deParaNotas deve casar exatamente
   applyEliminacoesDF(rows, eliminacoes){
+    const trim=v=>(v||'').toString().trim();
+
     if(!eliminacoes||eliminacoes.length===0){
-      console.warn('[applyEliminacoesDF] eliminacoes vazias — aba "Eliminações" não encontrada ou sem dados.');
+      console.warn('[applyEliminacoesDF] Nenhuma regra — aba "Eliminações" vazia ou não encontrada. Nenhuma eliminação aplicada.');
       return rows;
     }
-    // Separar: contas específicas (match por r.conta) vs grupos classDF (match por r.classDF)
-    const trim=v=>(v||'').toString().trim();
-    const contaSet  =new Set(eliminacoes.map(e=>trim(e.conta)).filter(v=>v));
-    const classDFSet=new Set(eliminacoes.flatMap(e=>[trim(e.classDF),trim(e.deParaDF)]).filter(v=>v));
-    console.log('[applyEliminacoesDF] contas:',contaSet.size,'| grupos classDF:',classDFSet.size,
-      '| amostra classDF:',[...classDFSet].slice(0,10));
+
+    // Normaliza e filtra regras inválidas (todos os campos de identif. vazios)
+    const rules=eliminacoes.map(e=>({
+      conta:      trim(e.conta),
+      classDF:    trim(e.classDF),
+      deParaDF:   trim(e.deParaDF),
+      deParaNotas:trim(e.deParaNotas),
+    })).filter(e=>e.conta||e.classDF||e.deParaDF);
+
+    if(!rules.length){
+      console.warn('[applyEliminacoesDF] Todas as linhas da aba Eliminações estão sem identificador. Nenhuma eliminação aplicada.');
+      return rows;
+    }
+
+    console.log('[applyEliminacoesDF] Regras carregadas:',rules.length,
+      '| Amostra (3):',rules.slice(0,3));
+
     let flagged=0;
     const result=rows.map(r=>{
-      // Conta específica OU classDF inteiro (quando Class.DF preenchido sem conta → todo o grupo)
-      if(contaSet.has(trim(r.conta))||classDFSet.has(trim(r.classDF))){
+      const rConta    =trim(r.conta);
+      const rClassDF  =trim(r.classDF);
+      const rDeParaDF =trim(r.deParaDF);
+      const rNotas    =trim(r.deParaNotas);
+
+      for(const rule of rules){
+        // 1. Verifica identificador (basta um campo bater — OR)
+        let idMatch=false;
+        if(rule.conta    && rConta===rule.conta)                      idMatch=true;
+        if(rule.classDF  && rClassDF===rule.classDF)                  idMatch=true;
+        if(rule.deParaDF && (rClassDF===rule.deParaDF||rDeParaDF===rule.deParaDF)) idMatch=true;
+        if(!idMatch) continue;
+
+        // 2. Verifica restrição de nota (AND)
+        if(rule.deParaNotas && rNotas!==rule.deParaNotas) continue;
+
+        // Passou nos dois critérios → marca e para de testar outras regras
         flagged++;
         return{...r,flagElim:true};
       }
       return r;
     });
-    console.log(`[applyEliminacoesDF] ${flagged} linhas marcadas como flagElim`);
+
+    console.log(`[applyEliminacoesDF] ${flagged} linha(s) marcada(s) como flagElim de ${rows.length}`);
     if(!flagged){
-      const sc=[...new Set(rows.slice(0,5).map(r=>r.conta))];
-      const sf=[...new Set(rows.slice(0,5).map(r=>r.classDF))];
-      console.warn('[applyEliminacoesDF] ZERO linhas. contas amostra:',sc,'| classDF amostra:',sf);
+      console.warn('[applyEliminacoesDF] ZERO linhas marcadas.',
+        '| Amostra rows (conta/classDF):',rows.slice(0,5).map(r=>({conta:r.conta,classDF:r.classDF})),
+        '| Amostra rules:',rules.slice(0,5));
     }
     return result;
   },
@@ -10564,7 +10657,9 @@ async function runProcess(){
     if(!App.files.contas||!(App.files.contas.name||App.files.contas.length)) throw new Error('Arquivo CONTAS DF.xlsx não selecionado.');
     if(!(App.files.balancetes||[]).length) throw new Error('Nenhum balancete selecionado na pasta 01.');
 
-    // 2. Parse de-para (contas)
+    // 2. Parse de-para (contas) — invalida cache para garantir leitura fresca
+    Ingestion._contasDFCache=null;
+    Ingestion._contasDFFile=null;
     App.raw.dpInc  = await Ingestion.parseDePara(App.files.contas,'Inc');
     App.raw.dpShop = await Ingestion.parseDePara(App.files.contas,'Shop');
     App.raw.dpEstac= await Ingestion.parseDePara(App.files.contas,'Estac');
