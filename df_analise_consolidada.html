@@ -663,6 +663,7 @@ input[type=file]{display:none}
 
     <div style="margin-top:22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
       <button class="btn btn-pri" id="btn-proc" onclick="runProcess()" disabled="">⚡ Processar e Analisar</button>
+      <button class="btn" id="btn-map" onclick="loadContasDFOnly()" style="background:var(--accent-2,#e8f4fd);color:var(--blue,#1e6bbf);border:1px solid var(--blue,#1e6bbf);display:none" title="Relê CONTAS DF.xlsx e reaplica o mapeamento sem recarregar os balancetes">🔄 Atualizar Mapeamento</button>
       <span style="font-size:12px;color:var(--gray-m)" id="proc-hint">Pronto para processar!</span>
     </div>
   </div>
@@ -7797,7 +7798,9 @@ function ldgHide(){
 // ESTADO GLOBAL
 // ══════════════════════════════════════════════════════════════
 const App = {
-  raw:{ participacoes:[], dpInc:[], dpShop:[], dpEstac:[], balancetes:[], estacionamento:[], pncPorAno:{}, eliminacoes:[] },
+  raw:{ participacoes:[], dpInc:[], dpShop:[], dpEstac:[], balancetes:[], estacionamento:[], pncPorAno:{}, eliminacoes:[], dpNotas:[] },
+  rawBalancetes: [],      // balancetes brutos pós-parse, sem de-para nem eliminações
+  rawEstacionamento: [],  // estacionamento bruto pós-parse, sem de-para nem eliminações
   unified: [],
   validations: [],
   files:{ contas:null, balancetes:[], estacionamento:[] },
@@ -8000,6 +8003,9 @@ const Ingestion = {
     res.dpInc  =lerDP(['DE-PARA Incorporadora','DF DE-PARA Incorporadora','Incorporadora','Inc','DE PARA INC','DEPARA INC']);
     res.dpShop =lerDP(['DE-PARA Shopping','DF DE-PARA Shopping','Shopping','Shop','DE PARA SHOP','DEPARA SHOP']);
     res.dpEstac=lerDP(['DE-PARA Estacionamento','DF DE-PARA Estacionamento','Estacionamento','Estac','DE PARA ESTAC','DEPARA ESTAC']);
+    res.dpNotas=lerDP(['De/Para Notas Explicativas','DePara Notas','De Para Notas',
+      'DepPara Notas Explicativas','Notas Explicativas','DP Notas']);
+    if(!res.dpNotas.length) console.warn('[parseContasDF] Aba "De/Para Notas Explicativas" não encontrada ou vazia.');
 
     // ── Aba Eliminações (De-para de consolidação NBC TG 36) ────────
     console.log('[parseContasDF] Abas disponíveis no CONTAS DF.xlsx:',wb.SheetNames);
@@ -8133,6 +8139,10 @@ const Ingestion = {
   async parseEliminacoes(contas){
     const r=await this._parseContasCached(contas);
     return r.eliminacoes||[];
+  },
+  async parseDpNotas(contas){
+    const r=await this._parseContasCached(contas);
+    return r.dpNotas||[];
   },
 
   // ── 1.4 Estacionamento ─────────────────────────────────────
@@ -8310,11 +8320,16 @@ const Transform = {
   // Linhas de estacionamento com De/Para DF marcado como "(Sintetica)" são excluídas —
   // representam agrupadores sintéticos do plano de contas, não lançamentos reais.
   // Marca flagElim:true apenas nas linhas que casam com uma regra explícita da aba "Eliminações".
-  // Lógica AND por regra: todos os campos não-vazios da regra devem casar com os da linha.
-  // Campo vazio na regra = wildcard (não restringe o matching).
-  // deParaNotas vazio = aplica para o grupo inteiro.
-  applyEliminacoesDF(rows, eliminacoes){
+  //
+  // Quando deParaNotas está PREENCHIDO na regra → AND exato em todos os campos.
+  // Quando deParaNotas está VAZIO na regra → consulta a aba "De/Para Notas Explicativas"
+  //   para obter as notas que pertencem ao classDF da regra e usa isso como filtro real.
+  //   Se a aba dpNotas não tiver entradas para o classDF → aceita qualquer nota (sem restrição).
+  applyEliminacoesDF(rows, eliminacoes, dpNotas=[]){
     const norm=v=>(v||'').toString().trim().toLowerCase();
+
+    console.log('[applyEliminacoesDF] dpNotas recebidos:',dpNotas.length,
+      '| regras Eliminações:',eliminacoes.length);
 
     if(!eliminacoes||eliminacoes.length===0){
       console.warn('[applyEliminacoesDF] eliminacoes vazias — nenhuma eliminação aplicada.');
@@ -8333,6 +8348,21 @@ const Transform = {
       return rows;
     }
 
+    // Pré-calcula para cada classDF as notas válidas segundo a aba De/Para Notas
+    const notasPorClassDF=new Map();
+    for(const regra of regras){
+      if(regra.deParaNotas||!regra.classDF) continue; // só para regras sem nota
+      if(notasPorClassDF.has(regra.classDF)) continue;
+      const notas=new Set(
+        dpNotas
+          .filter(dp=>norm(dp.classDF)===regra.classDF)
+          .map(dp=>norm(dp.deParaNotas))
+          .filter(Boolean)
+      );
+      notasPorClassDF.set(regra.classDF,notas);
+      console.log(`[applyEliminacoesDF] Regra "${regra.classDF}" sem nota → notasDoGrupo:`,[...notas]);
+    }
+
     console.log('[applyEliminacoesDF] Regras carregadas:',regras.length,'| Amostra (3):',regras.slice(0,3));
 
     let flagged=0;
@@ -8343,19 +8373,29 @@ const Transform = {
       const rNota =norm(r.deParaNotas);
 
       const match=regras.some(regra=>{
-        // AND: cada campo não-vazio na regra deve bater exatamente com o campo da linha
-        const matchConta   =!regra.conta    ||regra.conta   ===rConta;
-        const matchClass   =!regra.classDF  ||regra.classDF ===rClass;
-        const matchDP      =!regra.deParaDF ||regra.deParaDF===rDP;
-        const matchNota    =!regra.deParaNotas||regra.deParaNotas===rNota;
-        return matchConta&&matchClass&&matchDP&&matchNota;
+        if(!regra.deParaNotas){
+          // ── Regra sem nota: filtrar via aba De/Para Notas Explicativas ──
+          const matchClass=!regra.classDF||regra.classDF===rClass;
+          if(!matchClass) return false;
+          const notasDoGrupo=notasPorClassDF.get(regra.classDF);
+          // Se não há entradas na aba dpNotas para este classDF → sem restrição
+          const matchNota=!notasDoGrupo||notasDoGrupo.size===0||notasDoGrupo.has(rNota);
+          return matchNota;
+        } else {
+          // ── Regra com nota: AND exato em todos os campos ──
+          const matchConta =!regra.conta   ||regra.conta   ===rConta;
+          const matchClass =!regra.classDF ||regra.classDF ===rClass;
+          const matchDP    =!regra.deParaDF||regra.deParaDF===rDP;
+          const matchNota  = regra.deParaNotas===rNota;
+          return matchConta&&matchClass&&matchDP&&matchNota;
+        }
       });
 
       if(match){flagged++;return{...r,flagElim:true};}
       return r;
     });
 
-    console.log(`[applyEliminacoesDF] ${flagged} linha(s) marcada(s) como flagElim de ${rows.length}`);
+    console.log(`[applyEliminacoesDF] linhas marcadas flagElim: ${flagged} de ${rows.length}`);
     if(!flagged){
       console.warn('[applyEliminacoesDF] ZERO linhas marcadas.',
         '| Amostra rows (conta/classDF):',rows.slice(0,5).map(r=>({conta:r.conta,classDF:r.classDF})),
@@ -10634,6 +10674,99 @@ function checkReady(){
   if(hint) hint.textContent=btn.disabled?'Selecione CONTAS DF e os Balancetes para continuar.':'Pronto para processar!';
 }
 
+// ── reprocessFromMapping ─────────────────────────────────────────
+// Reaplicha todo o pipeline de transformação usando as bases brutas
+// já em memória (App.rawBalancetes + App.rawEstacionamento) e o
+// mapeamento atual (App.raw.*). NÃO relê arquivos de balancete.
+function reprocessFromMapping(){
+  if(!App.rawBalancetes||!App.rawBalancetes.length){
+    console.warn('[reprocessFromMapping] Nenhum balancete em memória. Processe os arquivos primeiro.');
+    return;
+  }
+  console.log('[reprocessFromMapping] Reaplicando regras...',
+    '| Balancetes:', App.rawBalancetes.length,
+    '| Estacionamento:', (App.rawEstacionamento||[]).length,
+    '| dpInc:', (App.raw.dpInc||[]).length,
+    '| eliminacoes:', (App.raw.eliminacoes||[]).length,
+    '| dpNotas:', (App.raw.dpNotas||[]).length);
+
+  const clsf    = Transform.applyClassification(App.rawBalancetes, App.raw.participacoes||[]);
+  const dpBal   = Transform.applyDePara(clsf, App.raw.dpInc||[], App.raw.dpShop||[], App.raw.dpEstac||[]);
+  const dpEstacR= Transform.applyDePara(App.rawEstacionamento||[], App.raw.dpInc||[], App.raw.dpShop||[], App.raw.dpEstac||[]);
+  const combined = [...dpBal, ...dpEstacR];
+  const withRules= Transform.applyRules(combined);
+  const withElim = Transform.applyEliminacoesDF(withRules, App.raw.eliminacoes||[], App.raw.dpNotas||[]);
+  const unified  = Transform.consolidate(withElim);
+
+  App.unified = unified;
+  App.alerts  = Transform.runValidations(unified);
+  computeP27All();
+
+  console.log('[reprocessFromMapping] Concluído.',
+    '| Linhas antes:', withRules.length,
+    '| Linhas após consolidate:', unified.length);
+
+  // Re-renderiza apenas quando o painel principal já está visível
+  const mainApp=document.getElementById('main-app');
+  if(mainApp&&mainApp.style.display!=='none'){
+    renderAlerts(App.alerts);
+    goTab(App.activeTab||'resumo');
+    renderConf(Ind.filter(unified,App.filters));
+    idbSave('appState',{unified,alerts:App.alerts,p27Detalhe:App.p27Detalhe,p27PA:App.p27PA})
+      .catch(e=>console.warn('[idb] save falhou:',e));
+    _setStatus(1,'✅ Mapeamento atualizado','upd-ok');
+  }
+}
+
+// ── loadContasDFOnly ──────────────────────────────────────────────
+// Relê apenas o CONTAS DF.xlsx (sem recarregar balancetes) e
+// reaplica todo o pipeline de transformação.
+async function loadContasDFOnly(){
+  if(!App.files.contas||(Array.isArray(App.files.contas)&&!App.files.contas.length)){
+    console.warn('[loadContasDFOnly] Arquivo CONTAS DF não selecionado.');
+    alert('Selecione o arquivo CONTAS DF.xlsx antes de atualizar o mapeamento.');
+    return;
+  }
+  if(!App.rawBalancetes||!App.rawBalancetes.length){
+    console.warn('[loadContasDFOnly] Nenhum balancete em memória. Use "Processar e Analisar" primeiro.');
+    alert('Nenhum balancete em memória. Use "⚡ Processar e Analisar" primeiro.');
+    return;
+  }
+  const btnMap=document.getElementById('btn-map');
+  if(btnMap) btnMap.disabled=true;
+  ldgShow('Atualizando mapeamento...','Relendo CONTAS DF.xlsx sem recarregar balancetes');
+  try{
+    // Invalida cache para forçar leitura fresca
+    Ingestion._contasDFCache=null;
+    Ingestion._contasDFFile=null;
+    const f=Array.isArray(App.files.contas)?App.files.contas[0]:App.files.contas;
+    console.log('[loadContasDFOnly] Relendo:', f.name, '|', f.size, 'bytes | lastModified:', f.lastModified);
+    const contas=await Ingestion.parseContasDF(f);
+
+    App.raw.dpInc        = contas.dpInc        || [];
+    App.raw.dpShop       = contas.dpShop       || [];
+    App.raw.dpEstac      = contas.dpEstac      || [];
+    App.raw.participacoes= contas.participacoes|| [];
+    App.raw.pncPorAno    = contas.pncPorAno    || {};
+    App.raw.eliminacoes  = contas.eliminacoes  || [];
+    App.raw.dpNotas      = contas.dpNotas      || [];
+
+    console.log('[loadContasDFOnly] Mapeamento atualizado.',
+      '| dpInc:', App.raw.dpInc.length,
+      '| dpShop:', App.raw.dpShop.length,
+      '| eliminacoes:', App.raw.eliminacoes.length,
+      '| dpNotas:', App.raw.dpNotas.length);
+
+    reprocessFromMapping();
+  }catch(e){
+    alert('Erro ao recarregar CONTAS DF: '+e.message);
+    console.error('[loadContasDFOnly]',e);
+  }finally{
+    ldgHide();
+    if(btnMap) btnMap.disabled=false;
+  }
+}
+
 // ── runProcess ────────────────────────────────────────────────────
 async function runProcess(){
   const btn=document.getElementById('btn-proc');
@@ -10653,11 +10786,14 @@ async function runProcess(){
     App.raw.participacoes = await Ingestion.parseParticipacoes(App.files.contas);
     App.raw.pncPorAno     = await Ingestion.parsePNC(App.files.contas);
     App.raw.eliminacoes   = await Ingestion.parseEliminacoes(App.files.contas);
+    App.raw.dpNotas       = await Ingestion.parseDpNotas(App.files.contas);
 
-    // 3. Parse balancetes
+    // 3. Parse balancetes — armazena base bruta para reprocessamento futuro
     App.raw.balancetes = await Ingestion.parseBalancetes(App.files.balancetes);
+    App.rawBalancetes  = App.raw.balancetes;
+    console.log('[runProcess] Balancetes carregados:', App.rawBalancetes.length, 'linhas');
 
-    // 4. Parse estacionamento (opcional)
+    // 4. Parse estacionamento (opcional) — armazena base bruta
     const _estacAll = App.files.estacionamento||[];
     const _estacFilt= _estacAll.filter(f=>/reportado/i.test(f.name)&&/\.(xlsx|xls)$/i.test(f.name));
     if(_estacFilt.length){
@@ -10665,30 +10801,26 @@ async function runProcess(){
     } else {
       App.raw.estacionamento = [];
     }
+    App.rawEstacionamento = App.raw.estacionamento;
+    console.log('[runProcess] Estacionamento carregado:', App.rawEstacionamento.length, 'linhas');
 
-    // 5. Classificar e unificar
-    const clsf     = Transform.applyClassification(App.raw.balancetes, App.raw.participacoes);
-    const dpBal    = Transform.applyDePara(clsf, App.raw.dpInc, App.raw.dpShop, App.raw.dpEstac);
-    const dpEstacR = Transform.applyDePara(App.raw.estacionamento, App.raw.dpInc, App.raw.dpShop, App.raw.dpEstac);
-    const combined = [...dpBal, ...dpEstacR];
-    const withRules= Transform.applyRules(combined);
-    const withElim = Transform.applyEliminacoesDF(withRules, App.raw.eliminacoes||[]);
-    const unified  = Transform.consolidate(withElim);
-    App.unified    = unified;
-    App.alerts    = Transform.runValidations(unified);
-    computeP27All();
+    // 5. Pipeline de transformação via reprocessFromMapping
+    reprocessFromMapping();
 
-    // 6. Renderizar
+    // 6. Transição de tela e renderização inicial
     ldgHide();
     document.getElementById('upload-screen').style.display='none';
     document.getElementById('main-app').style.display='';
     goTab(App.activeTab||'resumo');
     renderAlerts(App.alerts);
-    renderConf(Ind.filter(unified,App.filters));
-    idbSave('appState',{unified,alerts:App.alerts,p27Detalhe:App.p27Detalhe,p27PA:App.p27PA}).catch(e=>console.warn('[idb] save falhou:',e)); // FIX: não bloqueia UI
+    renderConf(Ind.filter(App.unified,App.filters));
+    idbSave('appState',{unified:App.unified,alerts:App.alerts,p27Detalhe:App.p27Detalhe,p27PA:App.p27PA}).catch(e=>console.warn('[idb] save falhou:',e));
     _setStatus(1,'✅ Pronto','upd-ok');
     _setStatus(2,'✅ Pronto','upd-ok');
     _setStatus(3,'✅ Pronto','upd-ok');
+    // Exibe o botão de atualização de mapeamento após o primeiro processamento completo
+    const btnMap=document.getElementById('btn-map');
+    if(btnMap) btnMap.style.display='';
   } catch(e){
     alert('Erro ao processar: '+e.message);
     console.error(e);
