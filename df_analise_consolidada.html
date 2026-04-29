@@ -8243,7 +8243,16 @@ const Transform = {
 
   // Aplica de-para contábil: mapeia Conta → Class. DF + De/Para DF + De/Para Notas
   applyDePara(rows,dpInc,dpShop,dpEstac){
-    const mkMap=arr=>{const m={};for(const d of arr) m[d.conta]=d;return m;};
+    const normConta=c=>(c||'').toString().replace(/\./g,'').replace(/^0+/,'').trim();
+    const mkMap=arr=>{
+      const m={};
+      for(const d of arr){
+        // Indexa pela conta normalizada (sem pontos, sem zeros à esquerda)
+        // para garantir match com contas vindas do TOTVS RM
+        m[normConta(d.conta)]=d;
+      }
+      return m;
+    };
     const mI=mkMap(dpInc), mS=mkMap(dpShop), mE=mkMap(dpEstac);
 
     const normG=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -8251,9 +8260,10 @@ const Transform = {
     const result=rows.map(r=>{
       let dp=null;
       const gdf=normG(r.grupoDF);
-      if(r.origem==='estacionamento')                                        dp=mE[r.conta];
-      else if(gdf.includes('empreendimento')||gdf.includes('incorporadora')) dp=mI[r.conta];
-      else if(gdf.includes('sc2')||gdf.includes('shopping')||gdf.includes('participac')) dp=mS[r.conta];
+      const rContaNorm=normConta(r.conta);
+      if(r.origem==='estacionamento')                                        dp=mE[rContaNorm];
+      else if(gdf.includes('empreendimento')||gdf.includes('incorporadora')) dp=mI[rContaNorm];
+      else if(gdf.includes('sc2')||gdf.includes('shopping')||gdf.includes('participac')) dp=mS[rContaNorm];
       else                                                                   { _skip++; return r; }
 
       // Considera mapeada se o registro existe no De-Para E tem ao menos classDF ou deParaDF preenchido
@@ -8348,6 +8358,17 @@ const Transform = {
       return rows;
     }
 
+    // Índice de regras por conta normalizada — para rows que não foram mapeados
+    // pelo de-para mas têm conta preenchida na aba Eliminações
+    const normConta=c=>(c||'').toString().replace(/\./g,'').replace(/^0+/,'').trim();
+    const regrasPorConta=new Map();
+    for(const regra of regras){
+      if(!regra.conta) continue;
+      const key=normConta(regra.conta);
+      if(!regrasPorConta.has(key)) regrasPorConta.set(key,[]);
+      regrasPorConta.get(key).push(regra);
+    }
+
     // Pré-calcula para cada classDF as notas válidas segundo a aba De/Para Notas
     const notasPorClassDF=new Map();
     for(const regra of regras){
@@ -8367,18 +8388,26 @@ const Transform = {
 
     let flagged=0;
     const result=rows.map(r=>{
-      const rConta=norm(r.conta);
-      const rClass=norm(r.classDF);
-      const rDP   =norm(r.deParaDF);
-      const rNota =norm(r.deParaNotas);
+      const rConta    =norm(r.conta);
+      const rContaKey =normConta(r.conta);
+      const rClass    =norm(r.classDF);
+      const rDP       =norm(r.deParaDF);
+      const rNota     =norm(r.deParaNotas);
 
       const match=regras.some(regra=>{
+        // Fallback: se a regra tem CONTA e bate exatamente → eliminar independente de classDF
+        if(regra.conta && normConta(regra.conta)===rContaKey){
+          // Ainda verifica deParaDF se a regra o tiver preenchido
+          const matchDP=!regra.deParaDF||regra.deParaDF===rDP;
+          if(matchDP) return true;
+        }
         if(!regra.deParaNotas){
           // ── Regra sem nota: filtrar via aba De/Para Notas Explicativas ──
           const matchClass=!regra.classDF||regra.classDF===rClass;
           if(!matchClass) return false;
-          // Se a regra especifica conta ou deParaDF, exige match preciso
-          const matchConta=!regra.conta||regra.conta===rConta;
+          // Compara conta normalizada (sem pontos, sem zeros à esquerda)
+          // para tolerar divergência de formato entre Excel e TOTVS RM
+          const matchConta=!regra.conta||normConta(regra.conta)===rContaKey;
           const matchDP   =!regra.deParaDF||regra.deParaDF===rDP;
           if(!matchConta||!matchDP) return false;
           const notasDoGrupo=notasPorClassDF.get(regra.classDF);
@@ -8387,7 +8416,7 @@ const Transform = {
           return matchNota;
         } else {
           // ── Regra com nota: AND exato em todos os campos ──
-          const matchConta =!regra.conta   ||regra.conta   ===rConta;
+          const matchConta =!regra.conta||normConta(regra.conta)===rContaKey;
           const matchClass =!regra.classDF ||regra.classDF ===rClass;
           const matchDP    =!regra.deParaDF||regra.deParaDF===rDP;
           const matchNota  = regra.deParaNotas===rNota;
