@@ -8011,15 +8011,18 @@ const Ingestion = {
     // ── Aba Eliminações (De-para de consolidação NBC TG 36) ────────
     console.log('[parseContasDF] Abas disponíveis no CONTAS DF.xlsx:',wb.SheetNames);
     const lerEliminacoes=()=>{
-      // Nomes candidatos (aceitamos variações de acento, espaço, maiúsculas)
+      const stripAcc=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase();
       const NOMES_ELIM=['Eliminações','Eliminacoes','Eliminacao','Eliminações DF',
         'Eliminacao DF','Elim DF','Elim','Eliminação','elimina','Intercompany','Inter-company'];
-      const ws=findAba(NOMES_ELIM);
+      const NOMES_NORM=NOMES_ELIM.map(stripAcc);
+      // Busca normalizando acentos para tolerar divergências de encoding no nome da aba
+      const abaEncontrada=wb.SheetNames.find(k=>NOMES_NORM.some(n=>stripAcc(k).includes(n)));
+      const ws=abaEncontrada?wb.Sheets[abaEncontrada]:null;
       if(!ws){
-        console.warn('[lerEliminacoes] Aba "Eliminações" não encontrada. Nomes testados:',NOMES_ELIM);
+        console.warn('[lerEliminacoes] Aba "Eliminações" não encontrada.',
+          '| Abas disponíveis:',wb.SheetNames,'| Nomes testados:',NOMES_ELIM);
         return [];
       }
-      const abaEncontrada=wb.SheetNames.find(k=>NOMES_ELIM.some(n=>k.toLowerCase().includes(n.toLowerCase())));
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
       if(!rows.length||!rows[0]){
         console.warn('[lerEliminacoes] Aba encontrada mas sem dados.');
@@ -8518,6 +8521,12 @@ const Transform = {
       alerts.push({tp:'wrn',title:'Estacionamento sem shopping identificado',msg:`${semShop.length} linha(s) sem código de shopping. Verifique a estrutura de pastas.`,n:semShop.length});
     }
 
+    // V5: Eliminações de consolidação não aplicadas
+    if(!unified.some(r=>r.flagElim)){
+      alerts.push({tp:'err',title:'⚠️ Eliminações NÃO aplicadas',
+        msg:"Nenhuma linha foi marcada para eliminação. Verifique se a aba 'Eliminações' do CONTAS DF.xlsx existe e contém regras válidas. Consulte o console (F12) para detalhes.",n:0});
+    }
+
     return alerts;
   }
 };
@@ -8526,6 +8535,12 @@ const Transform = {
 // MÓDULO: INDICATORS — Cálculo de indicadores
 // ══════════════════════════════════════════════════════════════
 const Ind = {
+
+  // Remove linhas de eliminação (exceto coligadas 44/45, que são intercompany válido no consolidado)
+  _noElim(rows){
+    const exc=new Set(['44','45']);
+    return rows.filter(r=>!r.flagElim||exc.has(String(r.codColigada)));
+  },
 
   // Filtra com base nos filtros ativos (grupoDF, tipo, ano, mes, ytd)
   filter(unified,filters){
@@ -8553,6 +8568,7 @@ const Ind = {
 
   // Receita líquida = classDF R21 (Receita líquida de aluguel e serviços)
   recBruta(rows){
+    rows=this._noElim(rows);
     const byClass=rows.filter(r=>r.classe==='DRE'&&r.classDF==='R21').reduce((s,r)=>s+r.saldoFinal,0);
     if(byClass!==0) return byClass;
     // Fallback para De/Para DF se classDF não mapeado
@@ -8561,6 +8577,7 @@ const Ind = {
 
   // EBITDA ≈ Lucro Operacional (R21+R1+R3+R2+R11+R23+R10)
   ebitda(rows){
+    rows=this._noElim(rows);
     const DRE_OP=['R21','R1','R3','R2','R11','R23','R10'];
     const byClass=rows.filter(r=>r.classe==='DRE'&&DRE_OP.includes(r.classDF)).reduce((s,r)=>s+r.saldoFinal,0);
     if(rows.filter(r=>r.classe==='DRE'&&r.classDF).length>0) return byClass;
@@ -8576,6 +8593,7 @@ const Ind = {
 
   // EBITDA Ajustado: exclui Equivalência Patrimonial (R23)
   ebitdaAdj(rows){
+    rows=this._noElim(rows);
     const DRE_OP_ADJ=['R21','R1','R3','R2','R11','R10'];
     const byClass=rows.filter(r=>r.classe==='DRE'&&DRE_OP_ADJ.includes(r.classDF)).reduce((s,r)=>s+r.saldoFinal,0);
     if(rows.filter(r=>r.classe==='DRE'&&r.classDF).length>0) return byClass;
@@ -8583,6 +8601,7 @@ const Ind = {
   },
 
   lucroLiq(rows){
+    rows=this._noElim(rows);
     const DRE_ALL=['R21','R1','R3','R2','R11','R23','R10','R22','R13','R14','R15'];
     const hasCls=rows.filter(r=>r.classe==='DRE'&&r.classDF).length>0;
     const ll=hasCls
@@ -8594,6 +8613,7 @@ const Ind = {
 
   // NOI = Receita líquida (R21) + Custos shopping (R1) + Custos estacionamento (R2) para SC2
   noi(rows){
+    rows=this._noElim(rows);
     const sc2=rows.filter(r=>r.grupoDF==='SC2 Participações');
     const rb=this.recBruta(sc2);
     const hasCls=sc2.filter(r=>r.classe==='DRE'&&r.classDF).length>0;
@@ -8611,6 +8631,7 @@ const Ind = {
 
   // Endividamento baseado em classDF
   debt(rows){
+    rows=this._noElim(rows);
     const bp=rows.filter(r=>r.classe==='BP');
     const hasCls=bp.filter(r=>r.classDF).length>0;
     let divBruta,caixa,divCP,divLP;
@@ -11004,10 +11025,21 @@ async function runProcess(){
     // 5. Pipeline de transformação via reprocessFromMapping
     reprocessFromMapping();
 
-    // 6. Transição de tela e renderização inicial
+    // 6. Alertas pós-pipeline: injetar erro no topo se eliminações ausentes
+    if(App.raw.eliminacoes.length===0){
+      const jaTemV5=(App.alerts||[]).some(a=>(a.title||'').includes('Eliminações'));
+      if(!jaTemV5){
+        App.alerts=[{tp:'err',title:'⚠️ Eliminações NÃO aplicadas',
+          msg:"Aba 'Eliminações' não encontrada ou vazia no CONTAS DF.xlsx. As eliminações de consolidação NÃO foram aplicadas.",n:0},...(App.alerts||[])];
+      }
+      console.warn('[runProcess] App.raw.eliminacoes vazio — eliminações não foram aplicadas.');
+    }
+
+    // 7. Transição de tela e renderização inicial
     ldgHide();
     document.getElementById('upload-screen').style.display='none';
     document.getElementById('main-app').style.display='';
+    diagnósticoDePara(); // Diagnóstico ANTES de renderizar — avisa sobre abas ausentes
     goTab(App.activeTab||'resumo');
     renderAlerts(App.alerts);
     renderConf(Ind.filter(App.unified,App.filters));
@@ -11015,7 +11047,6 @@ async function runProcess(){
     _setStatus(1,'✅ Pronto','upd-ok');
     _setStatus(2,'✅ Pronto','upd-ok');
     _setStatus(3,'✅ Pronto','upd-ok');
-    diagnósticoDePara();
     // Exibe o botão de atualização de mapeamento após o primeiro processamento completo
     const btnMap=document.getElementById('btn-map');
     if(btnMap) btnMap.style.display='';
