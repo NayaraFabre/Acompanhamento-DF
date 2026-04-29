@@ -8337,6 +8337,9 @@ const Transform = {
   //   Se a aba dpNotas não tiver entradas para o classDF → aceita qualquer nota (sem restrição).
   applyEliminacoesDF(rows, eliminacoes, dpNotas=[]){
     const norm=v=>(v||'').toString().trim().toLowerCase();
+    // normClass: remove espaços internos e hifens do código classDF
+    // tolera "A 13", "A-13", "A.13" → "a13" (mesmo que "A13" dos rows)
+    const normClass=v=>norm(v).replace(/[\s\-\.]+/g,'');
 
     console.log('[applyEliminacoesDF] dpNotas recebidos:',dpNotas.length,
       '| regras Eliminações:',eliminacoes.length);
@@ -8348,7 +8351,7 @@ const Transform = {
 
     const regras=eliminacoes.map(e=>({
       conta:      norm(e.conta),
-      classDF:    norm(e.classDF),
+      classDF:    normClass(e.classDF),   // normalização extra: sem espaços/hifens internos
       deParaDF:   norm(e.deParaDF),
       deParaNotas:norm(e.deParaNotas),
     })).filter(e=>e.conta||e.classDF||e.deParaDF);
@@ -8376,7 +8379,7 @@ const Transform = {
       if(notasPorClassDF.has(regra.classDF)) continue;
       const notas=new Set(
         dpNotas
-          .filter(dp=>norm(dp.classDF)===regra.classDF)
+          .filter(dp=>normClass(dp.classDF)===regra.classDF)  // usa normClass p/ tolerar variações
           .map(dp=>norm(dp.deParaNotas))
           .filter(Boolean)
       );
@@ -8390,41 +8393,49 @@ const Transform = {
     const result=rows.map(r=>{
       const rConta    =norm(r.conta);
       const rContaKey =normConta(r.conta);
-      const rClass    =norm(r.classDF);
+      const rClass    =normClass(r.classDF);   // normClass: tolera "A 13"/"A-13" → "a13"
       const rDP       =norm(r.deParaDF);
       const rNota     =norm(r.deParaNotas);
 
-      const match=regras.some(regra=>{
-        // Fallback: se a regra tem CONTA e bate exatamente → eliminar independente de classDF
+      let matchedRegra=null;
+      for(const regra of regras){
+        // Fallback por conta exata
         if(regra.conta && normConta(regra.conta)===rContaKey){
-          // Ainda verifica deParaDF se a regra o tiver preenchido
           const matchDP=!regra.deParaDF||regra.deParaDF===rDP;
-          if(matchDP) return true;
+          if(matchDP){matchedRegra=regra;break;}
         }
+        // Regra sem nota: usa aba De/Para Notas
         if(!regra.deParaNotas){
-          // ── Regra sem nota: filtrar via aba De/Para Notas Explicativas ──
           const matchClass=!regra.classDF||regra.classDF===rClass;
-          if(!matchClass) return false;
-          // Compara conta normalizada (sem pontos, sem zeros à esquerda)
-          // para tolerar divergência de formato entre Excel e TOTVS RM
+          if(!matchClass) continue;
           const matchConta=!regra.conta||normConta(regra.conta)===rContaKey;
           const matchDP   =!regra.deParaDF||regra.deParaDF===rDP;
-          if(!matchConta||!matchDP) return false;
+          if(!matchConta||!matchDP) continue;
           const notasDoGrupo=notasPorClassDF.get(regra.classDF);
-          // Se não há entradas na aba dpNotas para este classDF → sem restrição
           const matchNota=!notasDoGrupo||notasDoGrupo.size===0||notasDoGrupo.has(rNota);
-          return matchNota;
+          if(matchNota){matchedRegra=regra;break;}
         } else {
-          // ── Regra com nota: AND exato em todos os campos ──
+          // Regra com nota: AND exato em todos os campos
           const matchConta =!regra.conta||normConta(regra.conta)===rContaKey;
           const matchClass =!regra.classDF ||regra.classDF ===rClass;
           const matchDP    =!regra.deParaDF||regra.deParaDF===rDP;
-          const matchNota  = regra.deParaNotas===rNota;
-          return matchConta&&matchClass&&matchDP&&matchNota;
+          const matchNota  =regra.deParaNotas===rNota;
+          if(matchConta&&matchClass&&matchDP&&matchNota){matchedRegra=regra;break;}
         }
-      });
-
-      if(match){flagged++;return{...r,flagElim:true};}
+      }
+      if(matchedRegra){
+        flagged++;
+        return{
+          ...r,
+          flagElim:true,
+          regraElim:{
+            conta:      matchedRegra.conta      ||'',
+            classDF:    matchedRegra.classDF    ||'',
+            deParaDF:   matchedRegra.deParaDF   ||'',
+            deParaNotas:matchedRegra.deParaNotas||'',
+          }
+        };
+      }
       return r;
     });
 
@@ -10479,9 +10490,52 @@ function expSheet(data,name){
   XLSX.writeFile(wb,name);
 }
 function expBP(){
+  const MANUAL_NOTA='Manual ( Regra de Consolidação DF)';
+
+  function origemLancamento(r){
+    const isManualNota=(r.deParaNotas||'').trim()===MANUAL_NOTA;
+    const isP27=r.classDF==='P27';
+    const isElim=!!r.flagElim; // !! tolera true (bool) ou qualquer valor truthy
+
+    // Eliminação marcada pela aba ELIMINAÇÕES Excel
+    // mas cujo conteúdo indica regra imputada no código (P27 / Manual)
+    if(isElim&&(isManualNota||isP27))
+      return 'Eliminação Código';
+
+    // Eliminação rastreável à aba ELIMINAÇÕES Excel
+    if(isElim){
+      const reg=r.regraElim||{};
+      const partes=[
+        reg.classDF    ?`Class.DF: ${reg.classDF}`   :'',
+        reg.deParaDF   ?`De/Para: ${reg.deParaDF}`   :'',
+        reg.deParaNotas?`Nota: ${reg.deParaNotas}`   :'',
+        reg.conta      ?`Conta: ${reg.conta}`        :'',
+      ].filter(Boolean);
+      const detalhe=partes.length?` (${partes.join(' | ')})` :'';
+      return `Eliminação Excel${detalhe}`;
+    }
+
+    // Lançamento calculado pelo sistema sem flagElim
+    if(isP27||isManualNota)
+      return 'Regra de Consolidação';
+
+    // Saldo bruto do balancete importado
+    return 'Balancete';
+  }
+
   const rows=Ind.filter(App.unified,App.filters).filter(r=>r.classe==='BP');
-  const d=[['Conta','Descrição','Class. DF','De/Para DF','De/Para Notas','Grupo DF','Tipo','Empresa','Mês','Ano','Saldo (Fonte)','Origem']];
-  for(const r of rows) d.push([r.conta,r.descricao,r.classDF||'',r.deParaDF,r.deParaNotas,r.grupoDF,r.tipo,r.empresa,r.mes,r.ano,r.saldo,r.origem]);
+  const _dbgElim=rows.filter(r=>!!r.flagElim);
+  console.log(`[expBP] BP rows: ${rows.length} | flagElim: ${_dbgElim.length}`,
+    _dbgElim.slice(0,3).map(r=>({conta:r.conta,classDF:r.classDF,regraElim:r.regraElim})));
+  const d=[['Conta','Descrição','Class. DF','De/Para DF','De/Para Notas',
+            'Grupo DF','Tipo','Empresa','Mês','Ano','Saldo (Fonte)',
+            'Origem','Origem do Lançamento']];
+  for(const r of rows)
+    d.push([
+      r.conta,r.descricao,r.classDF||'',r.deParaDF,r.deParaNotas,
+      r.grupoDF,r.tipo,r.empresa,r.mes,r.ano,r.saldo,r.origem,
+      origemLancamento(r)
+    ]);
   expSheet(d,`Balancete_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 function expDRE(){
@@ -10796,6 +10850,7 @@ async function loadContasDFOnly(){
       '| dpShop:', App.raw.dpShop.length,
       '| eliminacoes:', App.raw.eliminacoes.length,
       '| dpNotas:', App.raw.dpNotas.length);
+    diagnósticoDePara();
 
     reprocessFromMapping();
   }catch(e){
@@ -10805,6 +10860,86 @@ async function loadContasDFOnly(){
     ldgHide();
     if(btnMap) btnMap.disabled=false;
   }
+}
+
+// ── Diagnóstico de leitura do CONTAS DF ─────────────────────
+function diagnósticoDePara(){
+  const itens=[
+    {label:'De/Para Incorporadora',  valor:App.raw.dpInc        ,tipo:'array'},
+    {label:'De/Para Shopping',       valor:App.raw.dpShop       ,tipo:'array'},
+    {label:'De/Para Estacionamento', valor:App.raw.dpEstac      ,tipo:'array'},
+    {label:'Participações / Empresas',valor:App.raw.participacoes,tipo:'array'},
+    {label:'Part. Não Controlador',  valor:App.raw.pncPorAno    ,tipo:'object'},
+    {label:'Regras de Eliminação',   valor:App.raw.eliminacoes  ,tipo:'array'},
+    {label:'De/Para Notas Expl.',    valor:App.raw.dpNotas      ,tipo:'array'},
+  ];
+
+  const linhas=itens.map(item=>{
+    const qtd=item.tipo==='array'
+      ?(item.valor||[]).length
+      :Object.keys(item.valor||{}).length;
+    const ok=qtd>0;
+    const icone=ok?'✅':'⚠️';
+    const cor=ok?'#1a7a3c':'#b45309';
+    const bg=ok?'#f0fdf4':'#fffbeb';
+    const borda=ok?'#bbf7d0':'#fde68a';
+    return `
+      <tr style="background:${bg}">
+        <td style="padding:6px 12px;border:1px solid ${borda};color:${cor};font-weight:600">
+          ${icone} ${item.label}
+        </td>
+        <td style="padding:6px 12px;border:1px solid ${borda};color:${cor};
+                   text-align:right;font-weight:700;font-size:15px">
+          ${qtd} registro${qtd!==1?'s':''}
+        </td>
+      </tr>`;
+  }).join('');
+
+  const temAlerta=itens.some(item=>{
+    const qtd=item.tipo==='array'
+      ?(item.valor||[]).length
+      :Object.keys(item.valor||{}).length;
+    return qtd===0;
+  });
+
+  const tituloCorBox=temAlerta?'#b45309':'#1a7a3c';
+  const bgBox=temAlerta?'#fffbeb':'#f0fdf4';
+  const bordaBox=temAlerta?'#fde68a':'#bbf7d0';
+  const titulo=temAlerta
+    ?' ⚠️ CONTAS DF — Leitura com Alertas'
+    :'✅ CONTAS DF — Todos os De/Paras Carregados';
+
+  const html=`
+    <div id="modal-depara-diag" style="
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      background:rgba(0,0,0,.45);z-index:9999;
+      display:flex;align-items:center;justify-content:center">
+      <div style="
+        background:#fff;border-radius:10px;padding:28px 32px;
+        min-width:420px;max-width:520px;box-shadow:0 8px 32px rgba(0,0,0,.22);
+        border:2px solid ${bordaBox}">
+        <div style="font-size:16px;font-weight:700;color:${tituloCorBox};
+                    margin-bottom:16px;border-bottom:1px solid ${bordaBox};padding-bottom:10px">
+          ${titulo}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          ${linhas}
+        </table>
+        <div style="margin-top:18px;text-align:right">
+          <button onclick="document.getElementById('modal-depara-diag').remove()"
+            style="background:#2563eb;color:#fff;border:none;border-radius:6px;
+                   padding:8px 22px;font-size:13px;font-weight:600;cursor:pointer">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  // Remove modal anterior se existir
+  const anterior=document.getElementById('modal-depara-diag');
+  if(anterior) anterior.remove();
+
+  document.body.insertAdjacentHTML('beforeend',html);
 }
 
 // ── runProcess ────────────────────────────────────────────────────
@@ -10858,6 +10993,7 @@ async function runProcess(){
     _setStatus(1,'✅ Pronto','upd-ok');
     _setStatus(2,'✅ Pronto','upd-ok');
     _setStatus(3,'✅ Pronto','upd-ok');
+    diagnósticoDePara();
     // Exibe o botão de atualização de mapeamento após o primeiro processamento completo
     const btnMap=document.getElementById('btn-map');
     if(btnMap) btnMap.style.display='';
