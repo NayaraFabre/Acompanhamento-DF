@@ -8377,6 +8377,10 @@ const Transform = {
           // ── Regra sem nota: filtrar via aba De/Para Notas Explicativas ──
           const matchClass=!regra.classDF||regra.classDF===rClass;
           if(!matchClass) return false;
+          // Se a regra especifica conta ou deParaDF, exige match preciso
+          const matchConta=!regra.conta||regra.conta===rConta;
+          const matchDP   =!regra.deParaDF||regra.deParaDF===rDP;
+          if(!matchConta||!matchDP) return false;
           const notasDoGrupo=notasPorClassDF.get(regra.classDF);
           // Se não há entradas na aba dpNotas para este classDF → sem restrição
           const matchNota=!notasDoGrupo||notasDoGrupo.size===0||notasDoGrupo.has(rNota);
@@ -8912,8 +8916,12 @@ function calcEliminacoes(rows){
   const elimA13Base=sum(elimA13Rows); // P27 será somado externamente em renderBP
 
   // REGRA 5 — A5, A11, P6, P12: partes relacionadas intercompany
+  // FIX: elimina apenas linhas A11 que têm contrapartida explícita (conta OU deParaDF preenchidos)
+  // Evita zerar A11 inteiro quando a regra de eliminação é genérica por classDF
   const elimA5Rows =rows.filter(r=>r.flagElim&&r.classDF==='A5');
-  const elimA11Rows=rows.filter(r=>r.flagElim&&r.classDF==='A11');
+  const elimA11Rows=rows.filter(r=>
+    r.flagElim&&r.classDF==='A11'&&(r.conta||r.deParaDF||r.deParaNotas)
+  );
   const elimP6Rows =rows.filter(r=>r.flagElim&&r.classDF==='P6');
   const elimA5 =sum(elimA5Rows);
   const elimA11=sum(elimA11Rows);   // usa saldo das próprias linhas A11 (fix: era elimA5)
@@ -8961,7 +8969,7 @@ function computeP27All(){
       const _fracaoRaw=App.raw.pncPorAno?.[cod]?.[a];
       // FIX: null=ausente(erro); 0=explícito válido(controle 100%)
       const fracaoRawNum=(_fracaoRaw!==undefined&&_fracaoRaw!==null&&_fracaoRaw!=='')?Number(_fracaoRaw):null;
-      const fracao=fracaoRawNum??0;
+      const fracao=fracaoRawNum!==null?parseFloat(fracaoRawNum.toFixed(5)):0;
       const fracaoAusente=fracaoRawNum===null;
       p27Detalhe.push({ano:a,codColigada:cod,empresa:emp.empresa,
                        baseCalculo:emp.plSum,fracao,fracaoAusente,valorP27:emp.plSum*fracao});
@@ -9050,7 +9058,10 @@ function renderBP(allRows){
 
   const rowItem=(cls)=>{
     const pa=getValPA(cls);
-    if(anosAtivos.every(a=>!pa[a])) return''; // oculta zeros
+    // FIX: classDFs estruturais do BP são sempre renderizados, mesmo com valor zero,
+    // para não ocultar linhas que podem ter sido zeradas incorretamente por eliminação.
+    const ALWAYS_SHOW=new Set(['A11','A5','A13','P6','P12','P8']);
+    if(!ALWAYS_SHOW.has(cls)&&anosAtivos.every(a=>!pa[a])) return''; // oculta zeros
     const lbl=BP_CLASSDF_LABELS[cls]||cls;
     return`<tr class="t2"><td><span style="font-family:monospace;font-size:10px;color:var(--gray-m);margin-right:6px">${cls}</span>${lbl}</td>${mkValCols(pa,false,true)}</tr>`;
   };
@@ -9130,7 +9141,7 @@ function renderBP(allRows){
       const _fracaoRaw=App.raw.pncPorAno?.[cod]?.[a];
       // FIX: null=ausente(erro); 0=explícito válido(controle 100%)
       const fracaoRawNum=(_fracaoRaw!==undefined&&_fracaoRaw!==null&&_fracaoRaw!=='')?Number(_fracaoRaw):null;
-      const fracao=fracaoRawNum??0;
+      const fracao=fracaoRawNum!==null?parseFloat(fracaoRawNum.toFixed(5)):0;
       const fracaoAusente=fracaoRawNum===null;
       if(fracaoAusente)
         console.warn(`[P27] Fração não encontrada: CODCOLIGADA=${cod} ANO=${a}. Verifique a aba "Participação de não controlador".`);
@@ -9162,7 +9173,7 @@ function renderBP(allRows){
         <td style="padding:3px 8px;font-family:monospace">${d.codColigada}</td>
         <td style="padding:3px 8px">${d.empresa||'—'}</td>
         <td style="padding:3px 8px;text-align:right">${fmtInt(d.baseCalculo)}</td>
-        <td style="padding:3px 8px;text-align:right">${(d.fracao*100).toFixed(2)}%</td>
+        <td style="padding:3px 8px;text-align:right">${(d.fracao*100).toFixed(5)}%</td>
         <td style="padding:3px 8px;text-align:right;font-weight:700">${fmtInt(d.valorP27)}</td>
       </tr>`).join('');
     if(audRows){
@@ -10215,8 +10226,8 @@ function renderP27Conf(){
         <td class="num" style="padding:6px 10px;font-size:12px">${fmtInt(d.baseCalculo)}</td>
         <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:${semFracao?'var(--red)':'var(--navy)'}">
           ${semFracao
-            ?'<span title="Fração não encontrada na aba Participação de não controlador">⚠ 0,00%</span>'
-            :(d.fracao*100).toFixed(2)+'%'}
+            ?'<span title="Fração não encontrada na aba Participação de não controlador">⚠ 0,00000%</span>'
+            :(d.fracao*100).toFixed(5)+'%'}
         </td>
         <td class="num" style="padding:6px 10px;font-size:12px;font-weight:700;color:${semFracao?'var(--red)':'var(--green)'}">
           ${semFracao?'<span style="color:var(--red)">—</span>':fmtInt(d.valorP27)}
