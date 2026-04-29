@@ -7826,7 +7826,8 @@ const Ingestion = {
       const r=new FileReader();
       const _t=setTimeout(()=>rej(new Error("Timeout lendo: "+f.name)),30000);
       r.onload=e=>{clearTimeout(_t);res(e.target.result);};
-      r.onerror=e=>{clearTimeout(_t);rej(e);};
+      r.onerror=e=>{clearTimeout(_t);rej(new Error('Erro ao ler arquivo "'+f.name+'": '+(e.target&&e.target.error?e.target.error.message:'falha de leitura')));};
+
       r.readAsArrayBuffer(f);
     });
   },
@@ -8763,7 +8764,7 @@ function renderResumo(rows){
   const nmSaldo=nmFiltered.reduce((s,r)=>s+r.saldo,0);
   const nmContasNM=[...new Set(nmFiltered.map(r=>r.conta))].length;
 
-  const v=App.validations;
+  const v=App.alerts||App.validations||[];
   const errs=v.filter(a=>a.tp==='err').length, wrns=v.filter(a=>a.tp==='wrn').length;
 
   // Badges no header
@@ -10523,10 +10524,31 @@ function expBP(){
     return 'Balancete';
   }
 
-  const rows=Ind.filter(App.unified,App.filters).filter(r=>r.classe==='BP');
+  // Export BP sem filtro de ano/mes: inclui todas as linhas BP,
+  // preservando flagElim de todos os períodos.
+  // Mantém filtros de grupoDF e tipo para consistência com a tela.
+  const _filtersAllPeriods={...App.filters, ano:null, mes:0, ytd:false};
+  const rows=Ind.filter(App.unified,_filtersAllPeriods).filter(r=>r.classe==='BP');
   const _dbgElim=rows.filter(r=>!!r.flagElim);
-  console.log(`[expBP] BP rows: ${rows.length} | flagElim: ${_dbgElim.length}`,
-    _dbgElim.slice(0,3).map(r=>({conta:r.conta,classDF:r.classDF,regraElim:r.regraElim})));
+  console.log(`[expBP] BP rows: ${rows.length} | flagElim: ${_dbgElim.length}`);
+  if(_dbgElim.length===0){
+    console.warn('[expBP] NENHUMA linha com flagElim encontrada no export.',
+      '| App.unified total:', App.unified.length,
+      '| BP no unified (todos períodos):',
+        App.unified.filter(r=>r.classe==='BP').length,
+      '| BP com flagElim no unified (todos períodos):',
+        App.unified.filter(r=>r.classe==='BP'&&r.flagElim).length,
+      '| Filtros ativos:', JSON.stringify(App.filters)
+    );
+  } else {
+    console.log('[expBP] Amostra eliminações:',
+      _dbgElim.slice(0,5).map(r=>({
+        conta:r.conta, classDF:r.classDF,
+        ano:r.ano, mes:r.mes,
+        regraElim:r.regraElim
+      }))
+    );
+  }
   const d=[['Conta','Descrição','Class. DF','De/Para DF','De/Para Notas',
             'Grupo DF','Tipo','Empresa','Mês','Ano','Saldo (Fonte)',
             'Origem','Origem do Lançamento']];
@@ -10998,8 +11020,9 @@ async function runProcess(){
     const btnMap=document.getElementById('btn-map');
     if(btnMap) btnMap.style.display='';
   } catch(e){
-    alert('Erro ao processar: '+e.message);
-    console.error(e);
+    const msg=e instanceof Error?e.message:(typeof e==='string'?e:String(e));
+    alert('Erro ao processar: '+(msg||'[sem mensagem — veja console F12]'));
+    console.error('[runProcess] Erro completo:',e);
   } finally {
     ldgHide();
     if(btn) btn.disabled=false;
