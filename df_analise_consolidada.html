@@ -8014,13 +8014,11 @@ const Ingestion = {
       'Sá Part','Sa Part','DF DE-PARA Sa Part','DF DE-PARA Sá Part'
     ]);
     res.dpEstac=lerDP(['DE-PARA Estacionamento','DF DE-PARA Estacionamento','Estacionamento','Estac','DE PARA ESTAC','DEPARA ESTAC']);
-    // Notas Explicativas estão na coluna F de cada aba DE-PARA (lidas por lerDP acima).
-    // Não há aba separada de Notas — dpNotas não é mais necessário.
+    // Notas lidas da col F de cada aba DE-PARA via lerDP. Sem aba separada.
     res.dpNotas=[];
 
     // ── Aba Eliminações (De-para de consolidação NBC TG 36) ────────
     console.log('[parseContasDF] Abas disponíveis no CONTAS DF.xlsx:',wb.SheetNames);
-    // Aba "DRE EMP" existe no arquivo mas não é consumida — reservada para uso futuro.
     const lerEliminacoes=()=>{
       const stripAcc=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase();
       const NOMES_ELIM=['Eliminações','Eliminacoes','Eliminacao','Eliminações DF',
@@ -8029,7 +8027,7 @@ const Ingestion = {
       const abaEncontrada=wb.SheetNames.find(k=>NOMES_NORM.some(n=>stripAcc(k).includes(n)));
       const ws=abaEncontrada?wb.Sheets[abaEncontrada]:null;
       if(!ws){
-        console.warn('[lerEliminacoes] Aba não encontrada.','| Abas disponíveis:',wb.SheetNames);
+        console.warn('[lerEliminacoes] Aba não encontrada. | Abas disponíveis:',wb.SheetNames);
         return [];
       }
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
@@ -8037,7 +8035,6 @@ const Ingestion = {
         console.warn('[lerEliminacoes] Aba encontrada mas sem dados.');
         return [];
       }
-      // Estrutura confirmada: col A = Class.DF, col B = De/Para Notas Explicativas
       const norm=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'')
                             .replace(/[./\\]/g,' ').replace(/\s+/g,' ').trim().toUpperCase();
       const h=rows[0].map(x=>norm(x));
@@ -8048,27 +8045,33 @@ const Ingestion = {
         if(idx<0) idx=h.findIndex(hv=>nc.some(c=>hv.includes(c)||c.includes(hv)));
         return idx;
       };
-      // Aba tem 2 colunas: Class.DF (A=0) e De/Para Notas Expl. (B=1)
-      const clI=findCol(['CLASSIF DF','CLASS DF','CLASSIFICACAO DF','CLASSIFDF','CLASSDF','CLASSIF','CLASS']);
+      // Estrutura confirmada: col A (0) = Class.DF | col B (1) = De/Para Notas Expl.
+      const clI=findCol(['CLASSIF DF','CLASS DF','CLASSIFICACAO DF','CLASSIFDF',
+                         'CLASSDF','CLASSIF','CLASS']);
       const ni =findCol(['DE PARA NOTAS','DEPARA NOTAS','DE/PARA NOTAS','DE-PARA NOTAS',
-                         'NOTAS EXPLICATIVAS','NOTA EXPLICATIVA','NOTAS','NOTA','DE PARA NOTA','DEPARA NOTA']);
-      // Fallbacks posicionais: A=classDF (0), B=deParaNotas (1)
+                         'NOTAS EXPLICATIVAS','NOTA EXPLICATIVA','NOTAS','NOTA',
+                         'DE PARA NOTA','DEPARA NOTA']);
       const clIF=clI>=0?clI:0;
       const niF =ni>=0?ni:1;
-      console.log('[lerEliminacoes] Colunas — CLASS.DF:',clI,'(usando:',clIF,
-        ') | DE/PARA NOTAS:',ni,'(usando:',niF,')');
+      const dfi =findCol(['DF','GRUPO DF','GRUPODF','DEMONSTRACAO','DEMONSTRAÇÃO']);
+      const dfiF=dfi>=0?dfi:3; // fallback: coluna D (índice 3)
+      console.log('[lerEliminacoes] CLASS.DF col:',clI,'(usando:',clIF,
+        ') | DE/PARA NOTAS col:',ni,'(usando:',niF,
+        ') | DF col:',dfi,dfi<0?'(fallback coluna 3)':'');
       const dp=[];
       for(let i=1;i<rows.length;i++){
         const r=rows[i];
         if(!r||r.every(c=>c===''||c===null||c===undefined)) continue;
         const classDFv=(r[clIF]||'').toString().trim();
         const deParaN =(r[niF] ||'').toString().trim();
-        if(!classDFv) continue;  // regra exige ao menos classDF preenchido
+        const dfv     =(r[dfiF]||'').toString().trim();
+        if(!classDFv) continue;
         dp.push({
-          conta:       '',   // aba ELIMINAÇÕES não tem coluna conta
-          classDF:     classDFv,
-          deParaDF:    '',   // aba ELIMINAÇÕES não tem coluna de/para DF
-          deParaNotas: deParaN
+          conta:'',        // aba ELIMINAÇÕES não tem coluna conta
+          classDF:classDFv,
+          deParaDF:'',     // aba ELIMINAÇÕES não tem coluna de/para DF
+          deParaNotas:deParaN,
+          df:dfv
         });
       }
       console.log('[lerEliminacoes] Total de regras:',dp.length,'| Amostra (5):',dp.slice(0,5));
@@ -8344,6 +8347,8 @@ const Transform = {
     // normClass: remove espaços internos e hifens do código classDF
     // tolera "A 13", "A-13", "A.13" → "a13" (mesmo que "A13" dos rows)
     const normClass=v=>norm(v).replace(/[\s\-\.]+/g,'');
+    // normGrupo: mesma normalização do grupoDF nos rows
+    const normGrupo=v=>(v||'').toString().trim().toLowerCase();
 
     console.log('[applyEliminacoesDF] dpNotas recebidos:',dpNotas.length,
       '| regras Eliminações:',eliminacoes.length);
@@ -8358,6 +8363,7 @@ const Transform = {
       classDF:    normClass(e.classDF),   // normalização extra: sem espaços/hifens internos
       deParaDF:   norm(e.deParaDF),
       deParaNotas:norm(e.deParaNotas),
+      df:         norm(e.df||''),         // vazio = sem filtro por DF (compatibilidade retroativa)
     })).filter(e=>e.conta||e.classDF||e.deParaDF);
 
     if(!regras.length){
@@ -8415,7 +8421,8 @@ const Transform = {
         // Fallback por conta exata
         if(regra.conta && normConta(regra.conta)===rContaKey){
           const matchDP=!regra.deParaDF||regra.deParaDF===rDP;
-          if(matchDP){matchedRegra=regra;break;}
+          const matchDF=!regra.df||regra.df===normGrupo(r.grupoDF);
+          if(matchDP&&matchDF){matchedRegra=regra;break;}
         }
         // Regra sem nota: usa aba De/Para Notas
         if(!regra.deParaNotas){
@@ -8428,14 +8435,16 @@ const Transform = {
           // !rNota: row sem nota → sempre casa com regra sem nota (guard de notasPorClassDF
           // só restringe rows COM nota preenchida, pois o Set não contém strings vazias)
           const matchNota=!rNota||!notasDoGrupo||notasDoGrupo.size===0||notasDoGrupo.has(rNota);
-          if(matchNota){matchedRegra=regra;break;}
+          const matchDF=!regra.df||regra.df===normGrupo(r.grupoDF);
+          if(matchNota&&matchDF){matchedRegra=regra;break;}
         } else {
           // Regra com nota: AND exato em todos os campos
           const matchConta =!regra.conta||normConta(regra.conta)===rContaKey;
           const matchClass =!regra.classDF ||regra.classDF ===rClass;
           const matchDP    =!regra.deParaDF||regra.deParaDF===rDP;
           const matchNota  =regra.deParaNotas===rNota;
-          if(matchConta&&matchClass&&matchDP&&matchNota){matchedRegra=regra;break;}
+          const matchDF    =!regra.df||regra.df===normGrupo(r.grupoDF);
+          if(matchConta&&matchClass&&matchDP&&matchNota&&matchDF){matchedRegra=regra;break;}
         }
       }
       if(matchedRegra){
@@ -8444,10 +8453,11 @@ const Transform = {
           ...r,
           flagElim:true,
           regraElim:{
-            conta:      matchedRegra.conta      ||'',
-            classDF:    matchedRegra.classDF    ||'',
-            deParaDF:   matchedRegra.deParaDF   ||'',
-            deParaNotas:matchedRegra.deParaNotas||'',
+            conta:       matchedRegra.conta       ||'',
+            classDF:     matchedRegra.classDF     ||'',
+            deParaDF:    matchedRegra.deParaDF    ||'',
+            deParaNotas: matchedRegra.deParaNotas ||'',
+            df:          matchedRegra.df          ||'',
           }
         };
       }
