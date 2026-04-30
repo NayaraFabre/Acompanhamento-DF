@@ -8966,10 +8966,30 @@ function calcEliminacoes(rows){
   const elimP8Rows=rows.filter(r=>r.flagElim&&r.classDF==='P8');
   const elimP8=sum(elimP8Rows);
 
-  // REGRA 3 — P24/P25/P26/P28/P30: eliminam TODOS exceto coligadas 44/45
+  // REGRA 3 — Eliminação de PL por grupo:
+  // · P24 e P28 → eliminam TODOS exceto coligadas 19, 44 e 45
+  // · P25, P26, P30 → eliminam TODOS exceto coligadas 44 e 45 (regra padrão)
   const PL_ELIM_CODES=['P24','P25','P26','P28','P30'];
+  const PL_EXCECAO_PADRAO=new Set(['44','45']);
+  const PL_EXCECAO_P24P28=new Set(['19','44','45']);
+  const isExcecaoPL=r=>{
+    const cod=String(r.codColigada||'').trim();
+    if(r.classDF==='P24'||r.classDF==='P28') return PL_EXCECAO_P24P28.has(cod);
+    return PL_EXCECAO_PADRAO.has(cod)||isExcecao(r);
+  };
   const elimPLRows=rows.filter(r=>
-    r.flagElim&&PL_ELIM_CODES.includes(r.classDF)&&!isExcecao(r)
+    r.flagElim&&PL_ELIM_CODES.includes(r.classDF)&&!isExcecaoPL(r)
+  );
+  console.log('[calcEliminacoes][REGRA3] elimPLRows total:',elimPLRows.length);
+  console.log('[calcEliminacoes][REGRA3] P24 eliminados:',
+    elimPLRows.filter(r=>r.classDF==='P24').length,
+    '| coligadas P24 preservadas (19/44/45):',
+    rows.filter(r=>r.flagElim&&r.classDF==='P24'&&isExcecaoPL(r)).map(r=>r.codColigada)
+  );
+  console.log('[calcEliminacoes][REGRA3] P28 eliminados:',
+    elimPLRows.filter(r=>r.classDF==='P28').length,
+    '| coligadas P28 preservadas (19/44/45):',
+    rows.filter(r=>r.flagElim&&r.classDF==='P28'&&isExcecaoPL(r)).map(r=>r.codColigada)
   );
   const elimPL=sum(elimPLRows);
 
@@ -10421,7 +10441,7 @@ function renderEliminacoesConf(){
   const grupos={
     'P2 → P15':                                           _elim.rows.p2,
     'P8 (eliminado total)':                               _elim.rows.p8,
-    'PL Eliminado (P24/P25/P26/P28/P30 — exceto 44/45)': _elim.rows.pl,
+    'PL Eliminado (P24/P28 exceto 19/44/45 · P25/P26/P30 exceto 44/45)': _elim.rows.pl,
     'A13 — Direto (aba Eliminações)':                     _elim.rows.a13d,
     'A13 — Base indireta (PL + Manual P8/P17)':           _elim.rows.a13,
     'A5 (elimina A11 e P12)':                             _elim.rows.a5,
