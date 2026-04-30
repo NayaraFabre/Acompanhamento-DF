@@ -7930,8 +7930,10 @@ const Ingestion = {
 
     // Aba Participações: CODCOLIGADA → Grupo DF + Tipo
     const findAba=(names)=>{
+      const normStr=s=>s.toLowerCase().replace(/\s+/g,' ').trim();
       for(const n of names){
-        const ws=wb.Sheets[Object.keys(wb.Sheets).find(k=>k.toLowerCase().includes(n.toLowerCase()))];
+        const nNorm=normStr(n);
+        const ws=wb.Sheets[Object.keys(wb.Sheets).find(k=>normStr(k).includes(nNorm))];
         if(ws) return ws;
       }
       console.warn('[findAba] Aba não encontrada para:',names,'| Abas disponíveis:',wb.SheetNames);
@@ -7977,7 +7979,12 @@ const Ingestion = {
       const defDi=clI>=0?2:1;
       const defNi=clI>=0?3:2;
       const di =this.col(h,['DE/PARA DF','DE-PARA DF','DEPARA DF','DE PARA DF','DEPARA','CLASSIFICACAO','CLASSIFICAÇÃO']);
-      const ni =this.col(h,['DE/PARA NOTAS','DE-PARA NOTAS','DEPARA NOTAS','NOTAS EXPLICATIVAS','NOTA EXPLICATIVA','NOTAS','NOTA']);
+      const ni =this.col(h,[
+        'DE/PARA NOTAS','DE-PARA NOTAS','DEPARA NOTAS',
+        'NOTAS EXPLICATIVAS','NOTA EXPLICATIVA','NOTAS','NOTA',
+        'NOTA EXPL','NOTAS EXPL','NOTA EXPL.','NOTAS EXPL.',
+        'DE/PARA NOTA','DEPARA NOTA'
+      ]);
 
       console.log(`[lerDP "${nomes[0]}"] cabeçalhos detectados:`,h.slice(0,8),
         '| ci:',ci,'clI:',clI,'di:',di,'(fallback:',defDi,') ni:',ni,'(fallback:',defNi,')');
@@ -7994,7 +8001,7 @@ const Ingestion = {
           conta,
           classDF:    classDFv,
           deParaDF:   deParaDFv,
-          deParaNotas:(r[ni>=0?ni:defNi]||'').toString().trim()
+          deParaNotas:(r[ni>=0?ni:(defNi<5?5:defNi)]||'').toString().trim()
         });
       }
       console.log(`[lerDP "${nomes[0]}"] ${dp.length} linha(s). Amostra:`,dp.slice(0,3));
@@ -8002,14 +8009,18 @@ const Ingestion = {
     };
 
     res.dpInc  =lerDP(['DE-PARA Incorporadora','DF DE-PARA Incorporadora','Incorporadora','Inc','DE PARA INC','DEPARA INC']);
-    res.dpShop =lerDP(['DE-PARA Shopping','DF DE-PARA Shopping','Shopping','Shop','DE PARA SHOP','DEPARA SHOP']);
+    res.dpShop =lerDP([
+      'DE-PARA Shopping','DF DE-PARA Shopping','Shopping','Shop','DE PARA SHOP','DEPARA SHOP',
+      'Sá Part','Sa Part','DF DE-PARA Sa Part','DF DE-PARA Sá Part'
+    ]);
     res.dpEstac=lerDP(['DE-PARA Estacionamento','DF DE-PARA Estacionamento','Estacionamento','Estac','DE PARA ESTAC','DEPARA ESTAC']);
-    res.dpNotas=lerDP(['De/Para Notas Explicativas','DePara Notas','De Para Notas',
-      'DepPara Notas Explicativas','Notas Explicativas','DP Notas']);
-    if(!res.dpNotas.length) console.warn('[parseContasDF] Aba "De/Para Notas Explicativas" não encontrada ou vazia.');
+    // Notas Explicativas estão na coluna F de cada aba DE-PARA (lidas por lerDP acima).
+    // Não há aba separada de Notas — dpNotas não é mais necessário.
+    res.dpNotas=[];
 
     // ── Aba Eliminações (De-para de consolidação NBC TG 36) ────────
     console.log('[parseContasDF] Abas disponíveis no CONTAS DF.xlsx:',wb.SheetNames);
+    // Aba "DRE EMP" existe no arquivo mas não é consumida — reservada para uso futuro.
     const lerEliminacoes=()=>{
       const stripAcc=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase();
       const NOMES_ELIM=['Eliminações','Eliminacoes','Eliminacao','Eliminações DF',
@@ -8405,6 +8416,41 @@ const Transform = {
     console.log('[applyEliminacoesDF] Regras carregadas:',regras.length,'| Amostra (3):',regras.slice(0,3));
 
     let flagged=0;
+    // DEBUG TEMPORÁRIO — remover após confirmar correção
+    if(regras.length&&rows.length){
+      const r0=rows[0];
+      const e0=regras[0];
+      console.log('[ELIM-DEBUG] Comparação regra[0] vs row[0]:',{
+        'regra.conta':      e0.conta,
+        'row.contaKey':     normConta(r0.conta),
+        'contaMatch':       !e0.conta||normConta(e0.conta)===normConta(r0.conta),
+        'regra.classDF':    e0.classDF,
+        'row.classDF':      normClass(r0.classDF),
+        'classMatch':       !e0.classDF||e0.classDF===normClass(r0.classDF),
+        'regra.deParaDF':   e0.deParaDF,
+        'row.deParaDF':     norm(r0.deParaDF),
+        'dpMatch':          !e0.deParaDF||e0.deParaDF===norm(r0.deParaDF),
+        'regra.deParaNotas':e0.deParaNotas,
+        'row.deParaNotas':  norm(r0.deParaNotas),
+      });
+      for(let ri=0;ri<Math.min(5,rows.length);ri++){
+        const r=rows[ri];
+        const rCKey=normConta(r.conta);
+        const rCls=normClass(r.classDF);
+        const rDp=norm(r.deParaDF);
+        for(let ei=0;ei<Math.min(10,regras.length);ei++){
+          const e=regras[ei];
+          const cConta=!e.conta||normConta(e.conta)===rCKey;
+          const cClass=!e.classDF||e.classDF===rCls;
+          const cDp=!e.deParaDF||e.deParaDF===rDp;
+          if(cConta&&cClass&&cDp){
+            console.log(`[ELIM-DEBUG] MATCH POSSÍVEL row[${ri}] × regra[${ei}]:`,
+              {conta:r.conta,classDF:r.classDF,deParaDF:r.deParaDF,
+               eClassDF:e.classDF,eDeParaDF:e.deParaDF,eDeParaNotas:e.deParaNotas});
+          }
+        }
+      }
+    }
     const result=rows.map(r=>{
       const rConta    =norm(r.conta);
       const rContaKey =normConta(r.conta);
