@@ -8001,7 +8001,7 @@ const Ingestion = {
           conta,
           classDF:    classDFv,
           deParaDF:   deParaDFv,
-          deParaNotas:(r[ni>=0?ni:(defNi<5?5:defNi)]||'').toString().trim()
+          deParaNotas:(r[ni>=0?ni:5]||'').toString().trim()
         });
       }
       console.log(`[lerDP "${nomes[0]}"] ${dp.length} linha(s). Amostra:`,dp.slice(0,3));
@@ -8026,12 +8026,10 @@ const Ingestion = {
       const NOMES_ELIM=['Eliminações','Eliminacoes','Eliminacao','Eliminações DF',
         'Eliminacao DF','Elim DF','Elim','Eliminação','elimina','Intercompany','Inter-company'];
       const NOMES_NORM=NOMES_ELIM.map(stripAcc);
-      // Busca normalizando acentos para tolerar divergências de encoding no nome da aba
       const abaEncontrada=wb.SheetNames.find(k=>NOMES_NORM.some(n=>stripAcc(k).includes(n)));
       const ws=abaEncontrada?wb.Sheets[abaEncontrada]:null;
       if(!ws){
-        console.warn('[lerEliminacoes] Aba "Eliminações" não encontrada.',
-          '| Abas disponíveis:',wb.SheetNames,'| Nomes testados:',NOMES_ELIM);
+        console.warn('[lerEliminacoes] Aba não encontrada.','| Abas disponíveis:',wb.SheetNames);
         return [];
       }
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
@@ -8039,61 +8037,41 @@ const Ingestion = {
         console.warn('[lerEliminacoes] Aba encontrada mas sem dados.');
         return [];
       }
-      // Normalizar cabeçalho: remove acentos, pontos, barras → uppercase, colapsa espaços duplos
-      // (ex: "Class. DF" → dot vira espaço → "Class  DF" → colapso → "CLASS DF")
+      // Estrutura confirmada: col A = Class.DF, col B = De/Para Notas Explicativas
       const norm=s=>(s||'').toString().normalize('NFD').replace(/[̀-ͯ]/g,'')
                             .replace(/[./\\]/g,' ').replace(/\s+/g,' ').trim().toUpperCase();
       const h=rows[0].map(x=>norm(x));
-      console.log('[lerEliminacoes] Aba:',abaEncontrada,'| Cabeçalho raw:',rows[0],'| Normalizado:',h);
-
-      // Função de detecção de coluna: first exact match, then substring match
+      console.log('[lerEliminacoes] Aba:',abaEncontrada,'| Cabeçalho:',rows[0],'| Normalizado:',h);
       const findCol=(candidates)=>{
         const nc=candidates.map(c=>norm(c));
-        let idx=h.findIndex(hv=>nc.includes(hv));             // exact
-        if(idx<0) idx=h.findIndex(hv=>nc.some(c=>hv.includes(c)||c.includes(hv))); // substring
+        let idx=h.findIndex(hv=>nc.includes(hv));
+        if(idx<0) idx=h.findIndex(hv=>nc.some(c=>hv.includes(c)||c.includes(hv)));
         return idx;
       };
-
-      const ci =findCol(['CONTA','CODCONTA','COD CONTA','COD CONTA CONTABIL','CODIGO CONTA','COD']);
-      const clI=findCol(['CLASSIF DF','CLASS DF','CLASSIFICACAO DF','CLASSIFDF','CLASSDF',
-                         'CLASSIF','CLASSIFICACAO','CLASS']);
-      const di =findCol(['DE PARA DF','DEPARA DF','DE/PARA DF','DE-PARA DF','DEPARA DF',
-                         'GRUPO DF','GRUPO','DEPARA']);
+      // Aba tem 2 colunas: Class.DF (A=0) e De/Para Notas Expl. (B=1)
+      const clI=findCol(['CLASSIF DF','CLASS DF','CLASSIFICACAO DF','CLASSIFDF','CLASSDF','CLASSIF','CLASS']);
       const ni =findCol(['DE PARA NOTAS','DEPARA NOTAS','DE/PARA NOTAS','DE-PARA NOTAS',
-                         'NOTAS EXPLICATIVAS','NOTA EXPLICATIVA','NOTAS','NOTA']);
-
-      // Fallbacks posicionais quando cabeçalho não detectado
-      const ciF  = ci>=0  ? ci  : 0;
-      const clIF = clI>=0 ? clI : 1;
-      const diF  = di>=0  ? di  : (clI>=0?2:1);
-      const niF  = ni>=0  ? ni  : (clI>=0?3:2);
-
-      console.log('[lerEliminacoes] Colunas detectadas — CONTA:',ci,'CLASS.DF:',clI,
-        'DE/PARA DF:',di,'DE/PARA NOTAS:',ni,
-        '| fallbacks usados:',[ci<0&&'CONTA',clI<0&&'CLASS.DF',di<0&&'DE/PARA DF',ni<0&&'NOTAS'].filter(Boolean));
-      // Amostra das primeiras linhas de dados para validação visual dos índices de coluna
-      if(rows.length>1){
-        const amostraIdx=[ciF,clIF,diF,niF];
-        console.log('[lerEliminacoes] Amostra linha 1 (índices [CONTA,CLASS,DEPARA,NOTAS]):',
-          amostraIdx.map(i=>rows[1]?rows[1][i]:'?'));
-        if(rows.length>2) console.log('[lerEliminacoes] Amostra linha 2:',
-          amostraIdx.map(i=>rows[2]?rows[2][i]:'?'));
-      }
-
+                         'NOTAS EXPLICATIVAS','NOTA EXPLICATIVA','NOTAS','NOTA','DE PARA NOTA','DEPARA NOTA']);
+      // Fallbacks posicionais: A=classDF (0), B=deParaNotas (1)
+      const clIF=clI>=0?clI:0;
+      const niF =ni>=0?ni:1;
+      console.log('[lerEliminacoes] Colunas — CLASS.DF:',clI,'(usando:',clIF,
+        ') | DE/PARA NOTAS:',ni,'(usando:',niF,')');
       const dp=[];
       for(let i=1;i<rows.length;i++){
         const r=rows[i];
         if(!r||r.every(c=>c===''||c===null||c===undefined)) continue;
-        const conta     =(r[ciF] ||'').toString().trim();
-        const classDFv  =(r[clIF]||'').toString().trim();
-        const deParaDFv =(r[diF] ||'').toString().trim();
-        const deParaN   =(r[niF] ||'').toString().trim();
-        if(!conta&&!classDFv&&!deParaDFv) continue;
-        dp.push({conta, classDF:classDFv, deParaDF:deParaDFv, deParaNotas:deParaN});
+        const classDFv=(r[clIF]||'').toString().trim();
+        const deParaN =(r[niF] ||'').toString().trim();
+        if(!classDFv) continue;  // regra exige ao menos classDF preenchido
+        dp.push({
+          conta:       '',   // aba ELIMINAÇÕES não tem coluna conta
+          classDF:     classDFv,
+          deParaDF:    '',   // aba ELIMINAÇÕES não tem coluna de/para DF
+          deParaNotas: deParaN
+        });
       }
-
-      console.log('[lerEliminacoes] Total de regras válidas:',dp.length,
-        '| Amostra (5 primeiras):',dp.slice(0,5));
+      console.log('[lerEliminacoes] Total de regras:',dp.length,'| Amostra (5):',dp.slice(0,5));
       return dp;
     };
     res.eliminacoes=lerEliminacoes();
@@ -8414,43 +8392,17 @@ const Transform = {
     }
 
     console.log('[applyEliminacoesDF] Regras carregadas:',regras.length,'| Amostra (3):',regras.slice(0,3));
+    if(regras.length&&rows.length){
+      const r0=rows.find(r=>r.deParaNotas)||rows[0];
+      const e0=regras[0];
+      console.log('[applyEliminacoesDF] Amostra comparação — regra:',
+        {classDF:e0.classDF,deParaNotas:e0.deParaNotas},
+        '| row (com nota):',{classDF:normClass(r0.classDF),deParaNotas:norm(r0.deParaNotas)},
+        '| classMatch:',e0.classDF===normClass(r0.classDF),
+        '| notaMatch:',e0.deParaNotas===norm(r0.deParaNotas));
+    }
 
     let flagged=0;
-    // DEBUG TEMPORÁRIO — remover após confirmar correção
-    if(regras.length&&rows.length){
-      const r0=rows[0];
-      const e0=regras[0];
-      console.log('[ELIM-DEBUG] Comparação regra[0] vs row[0]:',{
-        'regra.conta':      e0.conta,
-        'row.contaKey':     normConta(r0.conta),
-        'contaMatch':       !e0.conta||normConta(e0.conta)===normConta(r0.conta),
-        'regra.classDF':    e0.classDF,
-        'row.classDF':      normClass(r0.classDF),
-        'classMatch':       !e0.classDF||e0.classDF===normClass(r0.classDF),
-        'regra.deParaDF':   e0.deParaDF,
-        'row.deParaDF':     norm(r0.deParaDF),
-        'dpMatch':          !e0.deParaDF||e0.deParaDF===norm(r0.deParaDF),
-        'regra.deParaNotas':e0.deParaNotas,
-        'row.deParaNotas':  norm(r0.deParaNotas),
-      });
-      for(let ri=0;ri<Math.min(5,rows.length);ri++){
-        const r=rows[ri];
-        const rCKey=normConta(r.conta);
-        const rCls=normClass(r.classDF);
-        const rDp=norm(r.deParaDF);
-        for(let ei=0;ei<Math.min(10,regras.length);ei++){
-          const e=regras[ei];
-          const cConta=!e.conta||normConta(e.conta)===rCKey;
-          const cClass=!e.classDF||e.classDF===rCls;
-          const cDp=!e.deParaDF||e.deParaDF===rDp;
-          if(cConta&&cClass&&cDp){
-            console.log(`[ELIM-DEBUG] MATCH POSSÍVEL row[${ri}] × regra[${ei}]:`,
-              {conta:r.conta,classDF:r.classDF,deParaDF:r.deParaDF,
-               eClassDF:e.classDF,eDeParaDF:e.deParaDF,eDeParaNotas:e.deParaNotas});
-          }
-        }
-      }
-    }
     const result=rows.map(r=>{
       const rConta    =norm(r.conta);
       const rContaKey =normConta(r.conta);
@@ -8503,51 +8455,6 @@ const Transform = {
     });
 
     console.log(`[applyEliminacoesDF] linhas marcadas flagElim: ${flagged} de ${rows.length}`);
-    if(!flagged){
-      // ── Diagnóstico detalhado: mostra valores normalizados e qual condição falha ──
-      console.warn('[applyEliminacoesDF] ZERO linhas marcadas. Iniciando diagnóstico...');
-
-      // 0. Eliminações brutas (antes de normalizar) — para detectar se coluna errada foi lida
-      console.log('[ELIM-DIAG] Eliminações RAW (antes de norm):',
-        eliminacoes.slice(0,5).map(e=>({conta:e.conta,classDF:e.classDF,deParaDF:e.deParaDF,deParaNotas:e.deParaNotas})));
-
-      // 1. Regras normalizadas (o que o código de fato compara)
-      console.log('[ELIM-DIAG] Regras normalizadas (após norm):',
-        regras.map(r=>({conta:r.conta,classDF:r.classDF,deParaDF:r.deParaDF,deParaNotas:r.deParaNotas})));
-
-      // 1b. Amostra de rows normalizados — o que o código compara do lado das linhas
-      const rowsSample=rows.slice(0,5).map(r=>({conta:normConta(r.conta),cls:normClass(r.classDF),dp:norm(r.deParaDF),nota:norm(r.deParaNotas)}));
-      console.log('[ELIM-DIAG] Rows normalizados (amostra 5):',rowsSample);
-
-      // 2. classDFs únicos nos rows vs classDFs nas regras
-      const classesNosRows=[...new Set(rows.map(r=>normClass(r.classDF)).filter(Boolean))].sort();
-      const classesNasRegras=[...new Set(regras.map(r=>r.classDF).filter(Boolean))].sort();
-      console.log('[ELIM-DIAG] classDFs únicos nos rows (normalizados):',classesNosRows);
-      console.log('[ELIM-DIAG] classDFs nas regras (normalizados):',classesNasRegras);
-      const classesComum=classesNasRegras.filter(c=>classesNosRows.includes(c));
-      console.log('[ELIM-DIAG] classDFs em comum:',classesComum.length?classesComum:'NENHUM — regras e rows não compartilham nenhum classDF');
-
-      // 3. Para cada regra, testa contra os primeiros 3 rows com classDF compatível
-      for(const regra of regras){
-        const candidatos=rows.filter(r=>!regra.classDF||normClass(r.classDF)===regra.classDF).slice(0,3);
-        if(!candidatos.length){
-          console.log(`[ELIM-DIAG] Regra {classDF:'${regra.classDF}' conta:'${regra.conta}' dp:'${regra.deParaDF}'}: NENHUM row com este classDF`);
-          continue;
-        }
-        for(const r of candidatos){
-          const rContaKey=normConta(r.conta);
-          const rClass=normClass(r.classDF);
-          const rDP=norm(r.deParaDF);
-          const rNota=norm(r.deParaNotas);
-          const c1=regra.conta?normConta(regra.conta)===rContaKey:null;
-          const c2=!regra.classDF||regra.classDF===rClass;
-          const c3=!regra.deParaDF||regra.deParaDF===rDP;
-          const c4=!regra.deParaNotas?'(sem nota)':regra.deParaNotas===rNota;
-          console.log(`[ELIM-DIAG] Regra {cls:'${regra.classDF}' dp:'${regra.deParaDF}' nota:'${regra.deParaNotas}'} vs row {cls:'${rClass}' dp:'${rDP}' nota:'${rNota}' conta:'${rContaKey}'}`,
-            '| conta_match:',c1,'| class_match:',c2,'| dp_match:',c3,'| nota_match:',c4);
-        }
-      }
-    }
     return result;
   },
 
